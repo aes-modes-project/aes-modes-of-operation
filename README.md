@@ -32,12 +32,12 @@ not just the final ciphertext.
 - [x] **Step 1 – AES-128 core**: key expansion, round operations, encrypt/decrypt one block, step trace
 - [x] **Step 2 – Padding**: zeros + pad-count byte
 - [x] **Step 3 – ECB mode**
-- [ ] **Step 4 – CBC mode**
-- [ ] **Step 5 – CFB mode**
-- [ ] **Step 6 – OFB mode**
-- [ ] **Step 7 – CTR mode** (user-defined initial counter)
+- [x] **Step 4 – CBC mode**
+- [x] **Step 5 – CFB mode** (full-block, CFB-128)
+- [x] **Step 6 – OFB mode**
+- [x] **Step 7 – CTR mode** (user-defined initial counter)
 - [ ] **Step 8 – GUI** (PySide6, LaTeX-style typography, step-by-step view)
-- [ ] **Step 9 – Report material**: mode comparison, ECB-pattern and error-propagation demos
+- [ ] **Step 9 – Report material**: mode comparison ([started](docs/modes-comparison.md)), ECB-pattern and error-propagation demos
 
 ## Repository structure
 
@@ -48,15 +48,21 @@ aes-modes-of-operation/
 │   ├── __main__.py        # command-line demo (python -m aesmodes)
 │   ├── aes_core.py        # AES-128 block cipher (one 16-byte block)
 │   ├── padding.py         # zeros + pad-count padding
-│   └── modes.py           # modes of operation (ECB so far)
+│   └── modes.py           # ECB, CBC, CFB, OFB, CTR
 ├── tests/
 │   ├── test_aes_core.py   # FIPS-197 test vectors + random cross-checks
 │   ├── test_padding.py
-│   └── test_ecb.py        # NIST SP 800-38A vectors
+│   ├── test_ecb.py        # ECB: NIST SP 800-38A F.1.1
+│   └── test_modes.py      # CBC/CFB/OFB/CTR: NIST vectors, error propagation
 ├── docs/
 │   ├── aes-core.md        # how the AES core is built
 │   ├── padding.md         # the padding scheme
-│   └── ecb.md             # ECB mode
+│   ├── ecb.md             # one page per mode ...
+│   ├── cbc.md
+│   ├── cfb.md
+│   ├── ofb.md
+│   ├── ctr.md
+│   └── modes-comparison.md   # all five modes side by side
 ├── CHANGELOG.md           # what changed in each step
 ├── requirements.txt       # runtime dependencies
 ├── requirements-dev.txt   # testing dependencies
@@ -83,6 +89,10 @@ python -m pytest -v
 
 # 4. See the AES core in action (key schedule + round-by-round trace)
 python -m aesmodes
+
+# 5. Encrypt a message in all five modes, block by block
+python -m aesmodes modes "Hello, AES modes!"
+python -m aesmodes modes "Hello" --key 000102030405060708090a0b0c0d0e0f --counter ff
 ```
 
 In VS Code: open the folder, press `⇧⌘P` → **Python: Select Interpreter** → choose `.venv`, then
@@ -107,22 +117,37 @@ for step in trace[:3]:
 ### Encrypting a message with a mode
 
 ```python
-from aesmodes import ecb_encrypt, ecb_decrypt
+from aesmodes import encrypt, decrypt
 
 key = bytes.fromhex("2b7e151628aed2a6abf7158809cf4f3c")
-res = ecb_encrypt(key, b"Hello, AES modes!")
-print(res.hex())                               # ciphertext (32 bytes: 17 + 15 padding)
-for s in res.steps:                            # what happened to each block
-    print(s.index, s.block_in.hex(), "->", s.block_out.hex(), s.note)
 
-print(ecb_decrypt(key, res.output).output)     # b'Hello, AES modes!'
+res = encrypt("CBC", key, b"Hello, AES modes!")         # zero IV, zero+count padding
+print(res.hex())                                        # 32 bytes: 17 + 15 padding
+for s in res.steps:                                     # what happened to each block
+    print(s.index, s.note)
+    print("   in ", s.block_in.hex(), " xor ", s.xor_with.hex())
+    print("   AES", s.aes_input.hex(), "->", s.aes_output.hex())
+    print("   out", s.block_out.hex())
+
+print(decrypt("CBC", key, res.output).output)           # b'Hello, AES modes!'
+
+# CTR mode: the user chooses the initial counter (hex string, int or 16 bytes)
+ct = encrypt("CTR", key, b"Hello", counter="f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff").output
+print(decrypt("CTR", key, ct, counter="f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff").output)
 ```
+
+Each mode also has its own functions (`cbc_encrypt`, `ctr_decrypt`, …). `ModeResult` holds the
+output, the padded data, the IV or counter used, and one `BlockStep` per block.
 
 ## Verification
 
 The AES core is checked against the official **FIPS-197** test vectors (key expansion, Appendix B and
-Appendix C.1) and against `pycryptodome` on hundreds of random keys and blocks. The modes will be
-checked against **NIST SP 800-38A** test vectors.
+Appendix C.1) and against `pycryptodome` on hundreds of random keys and blocks.
+
+All five modes are checked against the **NIST SP 800-38A** test vectors (F.1.1, F.2.1, F.3.13, F.4.1,
+F.5.1), against `pycryptodome` with the zero IV, with round trips for many message lengths, and with
+error-propagation tests that confirm the behaviour described in
+[docs/modes-comparison.md](docs/modes-comparison.md). Run `python -m pytest -v` to see all 107 tests.
 
 ## References
 
