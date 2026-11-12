@@ -1,0 +1,3 @@
+# Runtime dependencies
+# (the AES core and modes use only the Python standard library;
+#  PySide6 will be added here when the GUI is built)

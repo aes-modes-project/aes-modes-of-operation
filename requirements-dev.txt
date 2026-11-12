@@ -1,0 +1,5 @@
+-r requirements.txt
+
+# Testing
+pytest>=7.0
+pycryptodome>=3.19   # reference implementation, used ONLY to cross-check our results in tests
