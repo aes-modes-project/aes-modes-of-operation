@@ -1,0 +1,103 @@
+# The learning app
+
+Folder: [`aesmodes/web/`](../aesmodes/web/) · Start it with `python -m aesmodes.web`
+
+The app is a local web page that **teaches** AES and its modes visually. It runs on your own computer:
+a small Python server (Flask) calls the project's AES and modes code, and your browser draws the
+results. No cryptography is done in JavaScript. Every number on screen comes from
+`aesmodes/aes_core.py` and `aesmodes/modes.py`.
+
+```
+ browser (static/)                      Python (aesmodes/)
+ ┌──────────────────────────┐  JSON   ┌───────────────────────────────┐
+ │ index.html, css, js      │ ──────► │ web/server.py   (Flask routes)│
+ │ draws matrices, diagrams │ ◄────── │ explain.py      (step data)   │
+ │ KaTeX for the formulas   │         │ aes_core.py, modes.py, padding│
+ └──────────────────────────┘         └───────────────────────────────┘
+```
+
+## Running it
+
+```bash
+source .venv/bin/activate
+pip install -r requirements.txt       # installs Flask
+python -m aesmodes.web                # opens http://127.0.0.1:8455
+```
+
+Options: `--port 9000` to use another port, `--no-browser` to not open the browser automatically.
+Stop it with **Ctrl+C**. The default port 8455 avoids port 5000, which macOS uses for AirPlay.
+
+## The four sections
+
+### 1 · Inside AES
+Encrypts one 16-byte block and lets you step through all **41 intermediate states** (buttons, the
+timeline, the slider, or the ← → keys; space plays and pauses). Each operation has its own visual and
+explanation:
+
+| Operation | What you see |
+|---|---|
+| Input | the 16 bytes filling the 4×4 state column by column (hover to match bytes to cells) |
+| SubBytes | before/after matrices and the full S-box with the looked-up row, column and result highlighted |
+| ShiftRows | an animation of the rows rotating left by 0, 1, 2 and 3 places |
+| MixColumns | the matrix multiplication for the chosen column, and the GF(2⁸) products for the chosen output byte |
+| AddRoundKey | state ⊕ round key = new state, plus the XOR of the chosen byte bit by bit |
+
+"The journey of the state" shows the state after every round as a small color map. Colors follow
+byte values, so you can see the plaintext's structure disappear.
+
+![SubBytes step](images/aes-subbytes.png)
+
+### 2 · Key expansion
+All 44 words of the key schedule. Clicking a word shows how it was computed. For words that start a
+round key, that includes RotWord → SubWord → ⊕ Rcon, then the XOR with the word four places back.
+
+### 3 · Modes of operation
+Pick a mode, type a message, and encrypt or decrypt. The page shows:
+- the mode's definition, formulas (typeset with KaTeX), and properties;
+- the **padding** of the last block, byte by byte (message, zero padding, pad count);
+- a **block diagram** with the real values of every block, including the chaining arrows. Click a block
+  to see its formula with the actual numbers, and open its AES encryption in section 1;
+- the result, with buttons to copy it or decrypt it again.
+
+![CBC chain](images/modes-cbc-chain.png)
+
+### 4 · Experiments
+1. **The ECB picture problem.** A picture is encrypted with all five modes and the encrypted bytes are
+   drawn as pixels. ECB keeps the outline; the others look like noise. You can also upload your own
+   image (it's converted to 128×128 pixels with 4 gray levels).
+2. **Flip one bit.** One ciphertext bit is flipped and the table shows how many plaintext bits are
+   wrong in each block, for every mode.
+3. **What a zero IV gives away.** Two similar messages are encrypted and identical ciphertext blocks
+   are highlighted.
+4. **The five modes side by side.** A comparison table.
+
+![ECB picture experiment](images/lab-ecb-picture.png)
+
+## Server API
+
+| Method | Path | Body | Returns |
+|---|---|---|---|
+| GET | `/api/sbox` | – | S-box and inverse S-box |
+| POST | `/api/aes` | `key`, `block`, `blockFormat` (`hex`/`text`) | 41 steps with before/after states, round keys, MixColumns detail |
+| POST | `/api/keys` | `key` | the 44 words and how each was computed |
+| POST | `/api/mode` | `mode`, `operation`, `key`, `data`, `dataFormat`, `counter` | output, padding, one record per block |
+| POST | `/api/bitflip` | `key`, `message`, `byte`, `bit`, `counter` | damaged bits per block for each mode |
+| POST | `/api/image` | `mode`, `key`, `pixels` (base64), `counter` | encrypted pixels (base64) |
+
+Errors come back as HTTP 400 with `{"error": "..."}`, for example for a wrong key length or bad padding
+after decrypting with the wrong key.
+
+## Files
+
+| File | Purpose |
+|---|---|
+| `aesmodes/explain.py` | records intermediate values from the core code in JSON form |
+| `aesmodes/web/server.py` | Flask routes |
+| `aesmodes/web/__main__.py` | `python -m aesmodes.web` entry point |
+| `static/index.html` | page structure and the written explanations |
+| `static/css/style.css` | the LaTeX-style look (Computer Modern fonts from KaTeX) |
+| `static/js/common.js` | server calls, matrix drawing, helpers |
+| `static/js/aes.js`, `keys.js`, `modes.js`, `lab.js` | one file per section |
+| `static/vendor/katex/` | KaTeX 0.16 (MIT license), bundled so the app works offline |
+
+The tests in `tests/test_web.py` check that the server's numbers match the FIPS-197 and core results.

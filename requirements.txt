@@ -1,3 +1,4 @@
 # Runtime dependencies
-# (the AES core and modes use only the Python standard library;
-#  PySide6 will be added here when the GUI is built)
+# The AES core and the modes use only the Python standard library.
+# Flask runs the learning app (python -m aesmodes.web).
+flask>=3.0
