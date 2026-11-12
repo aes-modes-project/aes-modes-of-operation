@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented here, one entry per development step.
 
+## [0.4.0] – Step 8: the learning app
+### Added
+- `aesmodes/web/`: an interactive learning app (`python -m aesmodes.web`), a Flask server plus a
+  LaTeX-style web page with four sections: Inside AES (41 steps with per-operation visuals and
+  explanations), Key expansion, Modes of operation (padding view, block diagrams with real values,
+  encrypt/decrypt), and Experiments (ECB picture, bit flip, zero-IV leak, comparison table).
+- `aesmodes/explain.py`: converts the core's intermediate values into step-by-step data.
+- KaTeX 0.16 bundled in `aesmodes/web/static/vendor/katex/`, so formulas and Computer Modern fonts work offline.
+- `tests/test_web.py`: server tests against FIPS-197 values and the modes library.
+- `docs/web-app.md` and screenshots in `docs/images/`.
+### Changed
+- Decrypt functions accept `strip_padding=False` to inspect damaged ciphertexts (used by the bit-flip experiment).
+- `requirements.txt` now includes Flask.
+
 ## [0.3.0] – Steps 4–7: CBC, CFB, OFB and CTR
 ### Added
 - `aesmodes/modes.py`: CBC, CFB (full-block), OFB and CTR, each with encrypt/decrypt and per-block

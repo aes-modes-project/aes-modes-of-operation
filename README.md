@@ -3,9 +3,12 @@
 **EECE 455/632 – Cryptography and Network Security · Project 8**
 
 An educational implementation of **AES-128** written from scratch in Python, together with its five
-classic **modes of operation**: ECB, CBC, CFB, OFB and Counter (CTR). A desktop GUI with a
-LaTeX-inspired look shows every step of the encryption so students can see *how* each mode works,
-not just the final ciphertext.
+classic **modes of operation**: ECB, CBC, CFB, OFB and Counter (CTR). It comes with an interactive
+**learning app** with a LaTeX-inspired look. It animates every step of AES (SubBytes, ShiftRows,
+MixColumns, AddRoundKey, key expansion), draws each mode block by block with real values, and includes
+experiments such as the famous "ECB picture".
+
+![Overview of the learning app](docs/images/overview.png)
 
 > ⚠️ **Educational use only.** This project follows the course specification (for example, an
 > all-zero IV), which is deliberately predictable so results can be checked by hand. Do not use it to
@@ -36,8 +39,8 @@ not just the final ciphertext.
 - [x] **Step 5 – CFB mode** (full-block, CFB-128)
 - [x] **Step 6 – OFB mode**
 - [x] **Step 7 – CTR mode** (user-defined initial counter)
-- [ ] **Step 8 – GUI** (PySide6, LaTeX-style typography, step-by-step view)
-- [ ] **Step 9 – Report material**: mode comparison ([started](docs/modes-comparison.md)), ECB-pattern and error-propagation demos
+- [x] **Step 8 – Learning app**: AES step-by-step visualizer, key expansion, mode diagrams, experiments ([docs](docs/web-app.md))
+- [ ] **Step 9 – Report material**: mode comparison ([done](docs/modes-comparison.md)), ECB-pattern and error-propagation demos (in the app), written report
 
 ## Repository structure
 
@@ -48,12 +51,17 @@ aes-modes-of-operation/
 │   ├── __main__.py        # command-line demo (python -m aesmodes)
 │   ├── aes_core.py        # AES-128 block cipher (one 16-byte block)
 │   ├── padding.py         # zeros + pad-count padding
-│   └── modes.py           # ECB, CBC, CFB, OFB, CTR
+│   ├── modes.py           # ECB, CBC, CFB, OFB, CTR
+│   ├── explain.py         # step-by-step data for the learning app
+│   └── web/               # the learning app (python -m aesmodes.web)
+│       ├── server.py      # Flask server: calls the code above, returns JSON
+│       └── static/        # index.html, css/, js/, vendor/katex/
 ├── tests/
 │   ├── test_aes_core.py   # FIPS-197 test vectors + random cross-checks
 │   ├── test_padding.py
 │   ├── test_ecb.py        # ECB: NIST SP 800-38A F.1.1
-│   └── test_modes.py      # CBC/CFB/OFB/CTR: NIST vectors, error propagation
+│   ├── test_modes.py      # CBC/CFB/OFB/CTR: NIST vectors, error propagation
+│   └── test_web.py        # the learning app's server
 ├── docs/
 │   ├── aes-core.md        # how the AES core is built
 │   ├── padding.md         # the padding scheme
@@ -62,7 +70,9 @@ aes-modes-of-operation/
 │   ├── cfb.md
 │   ├── ofb.md
 │   ├── ctr.md
-│   └── modes-comparison.md   # all five modes side by side
+│   ├── modes-comparison.md   # all five modes side by side
+│   ├── web-app.md         # how the learning app works
+│   └── images/            # screenshots
 ├── CHANGELOG.md           # what changed in each step
 ├── requirements.txt       # runtime dependencies
 ├── requirements-dev.txt   # testing dependencies
@@ -81,22 +91,46 @@ Requires **Python 3.10+**.
 python3 -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 
-# 2. Install dependencies
+# 2. Install dependencies (Flask for the app, pytest + pycryptodome for the tests)
 pip install -r requirements-dev.txt
 
 # 3. Run the tests
 python -m pytest -v
 
-# 4. See the AES core in action (key schedule + round-by-round trace)
+# 4. Start the learning app (opens http://127.0.0.1:8455 in your browser)
+python -m aesmodes.web
+
+# 5. Or use the command line: AES key schedule + round-by-round trace
 python -m aesmodes
 
-# 5. Encrypt a message in all five modes, block by block
+# 6. Encrypt a message in all five modes, block by block
 python -m aesmodes modes "Hello, AES modes!"
 python -m aesmodes modes "Hello" --key 000102030405060708090a0b0c0d0e0f --counter ff
 ```
 
 In VS Code: open the folder, press `⇧⌘P` → **Python: Select Interpreter** → choose `.venv`, then
 use the **Testing** sidebar to run the tests.
+
+## The learning app
+
+```bash
+python -m aesmodes.web
+```
+
+| Section | What it teaches |
+|---|---|
+| **1 · Inside AES** | Step through all 41 states of one block: S-box lookup, animated ShiftRows, MixColumns matrix maths in GF(2⁸), bit-level AddRoundKey |
+| **2 · Key expansion** | How each of the 44 key words is built (RotWord, SubWord, Rcon) |
+| **3 · Modes of operation** | Encrypt or decrypt any message; see the padding byte by byte and a block diagram with every real value |
+| **4 · Experiments** | The ECB picture, flipping one ciphertext bit, what a zero IV leaks, comparison table |
+
+| | |
+|---|---|
+| ![SubBytes](docs/images/aes-subbytes.png) | ![MixColumns](docs/images/aes-mixcolumns.png) |
+| ![CBC chain](docs/images/modes-cbc-chain.png) | ![ECB picture](docs/images/lab-ecb-picture.png) |
+
+Every value is computed by the Python code in `aesmodes/`. The browser only draws. See
+[docs/web-app.md](docs/web-app.md) for how it works.
 
 ## Usage (library)
 
@@ -147,7 +181,7 @@ Appendix C.1) and against `pycryptodome` on hundreds of random keys and blocks.
 All five modes are checked against the **NIST SP 800-38A** test vectors (F.1.1, F.2.1, F.3.13, F.4.1,
 F.5.1), against `pycryptodome` with the zero IV, with round trips for many message lengths, and with
 error-propagation tests that confirm the behaviour described in
-[docs/modes-comparison.md](docs/modes-comparison.md). Run `python -m pytest -v` to see all 107 tests.
+[docs/modes-comparison.md](docs/modes-comparison.md). Run `python -m pytest -v` to see all 123 tests.
 
 ## References
 

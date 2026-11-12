@@ -88,6 +88,11 @@ def _check_ciphertext(ct: bytes) -> None:
         )
 
 
+def _finish(padded: bytes, strip_padding: bool) -> bytes:
+    """Remove the padding after decryption (or keep it, e.g. to inspect damaged data)."""
+    return unpad(padded) if strip_padding else padded
+
+
 def counter_to_int(counter: Union[int, bytes, str]) -> int:
     """Accept the initial counter as an int, 16 bytes, or a hex string (up to 32 digits)."""
     if isinstance(counter, int):
@@ -131,7 +136,8 @@ def ecb_encrypt(key: bytes, plaintext: bytes) -> ModeResult:
     return ModeResult("ECB", "encrypt", out, padded, steps)
 
 
-def ecb_decrypt(key: bytes, ciphertext: bytes) -> ModeResult:
+def ecb_decrypt(key: bytes, ciphertext: bytes,
+                strip_padding: bool = True) -> ModeResult:
     _check_key(key)
     _check_ciphertext(ciphertext)
     aes = AES128(key)
@@ -140,7 +146,7 @@ def ecb_decrypt(key: bytes, ciphertext: bytes) -> ModeResult:
         p = aes.decrypt_block(c)
         steps.append(BlockStep(i, c, c, p, p, note="P_i = D_K(C_i)"))
         padded += p
-    return ModeResult("ECB", "decrypt", unpad(padded), padded, steps)
+    return ModeResult("ECB", "decrypt", _finish(padded, strip_padding), padded, steps)
 
 
 # --------------------------------------------------------------------------
@@ -163,7 +169,8 @@ def cbc_encrypt(key: bytes, plaintext: bytes, iv: bytes = ZERO_IV) -> ModeResult
     return ModeResult("CBC", "encrypt", out, padded, steps, iv=iv)
 
 
-def cbc_decrypt(key: bytes, ciphertext: bytes, iv: bytes = ZERO_IV) -> ModeResult:
+def cbc_decrypt(key: bytes, ciphertext: bytes, iv: bytes = ZERO_IV,
+                strip_padding: bool = True) -> ModeResult:
     _check_key(key)
     _check_iv(iv)
     _check_ciphertext(ciphertext)
@@ -176,7 +183,7 @@ def cbc_decrypt(key: bytes, ciphertext: bytes, iv: bytes = ZERO_IV) -> ModeResul
                                note="P_i = D_K(C_i) ⊕ C_{i-1}"))
         padded += p
         prev = c
-    return ModeResult("CBC", "decrypt", unpad(padded), padded, steps, iv=iv)
+    return ModeResult("CBC", "decrypt", _finish(padded, strip_padding), padded, steps, iv=iv)
 
 
 # --------------------------------------------------------------------------
@@ -200,7 +207,8 @@ def cfb_encrypt(key: bytes, plaintext: bytes, iv: bytes = ZERO_IV) -> ModeResult
     return ModeResult("CFB", "encrypt", out, padded, steps, iv=iv)
 
 
-def cfb_decrypt(key: bytes, ciphertext: bytes, iv: bytes = ZERO_IV) -> ModeResult:
+def cfb_decrypt(key: bytes, ciphertext: bytes, iv: bytes = ZERO_IV,
+                strip_padding: bool = True) -> ModeResult:
     _check_key(key)
     _check_iv(iv)
     _check_ciphertext(ciphertext)
@@ -213,7 +221,7 @@ def cfb_decrypt(key: bytes, ciphertext: bytes, iv: bytes = ZERO_IV) -> ModeResul
                                note="P_i = C_i ⊕ E_K(C_{i-1})"))
         padded += p
         prev = c
-    return ModeResult("CFB", "decrypt", unpad(padded), padded, steps, iv=iv)
+    return ModeResult("CFB", "decrypt", _finish(padded, strip_padding), padded, steps, iv=iv)
 
 
 # --------------------------------------------------------------------------
@@ -243,13 +251,14 @@ def ofb_encrypt(key: bytes, plaintext: bytes, iv: bytes = ZERO_IV) -> ModeResult
     return ModeResult("OFB", "encrypt", out, padded, steps, iv=iv)
 
 
-def ofb_decrypt(key: bytes, ciphertext: bytes, iv: bytes = ZERO_IV) -> ModeResult:
+def ofb_decrypt(key: bytes, ciphertext: bytes, iv: bytes = ZERO_IV,
+                strip_padding: bool = True) -> ModeResult:
     _check_key(key)
     _check_iv(iv)
     _check_ciphertext(ciphertext)
     steps = _ofb(key, ciphertext, iv, decrypting=True)
     padded = b"".join(s.block_out for s in steps)
-    return ModeResult("OFB", "decrypt", unpad(padded), padded, steps, iv=iv)
+    return ModeResult("OFB", "decrypt", _finish(padded, strip_padding), padded, steps, iv=iv)
 
 
 # --------------------------------------------------------------------------
@@ -278,13 +287,14 @@ def ctr_encrypt(key: bytes, plaintext: bytes, counter: Union[int, bytes, str]) -
     return ModeResult("CTR", "encrypt", out, padded, steps, counter=initial)
 
 
-def ctr_decrypt(key: bytes, ciphertext: bytes, counter: Union[int, bytes, str]) -> ModeResult:
+def ctr_decrypt(key: bytes, ciphertext: bytes, counter: Union[int, bytes, str],
+                strip_padding: bool = True) -> ModeResult:
     _check_key(key)
     _check_ciphertext(ciphertext)
     initial = counter_to_int(counter)
     steps = _ctr(key, ciphertext, initial, decrypting=True)
     padded = b"".join(s.block_out for s in steps)
-    return ModeResult("CTR", "decrypt", unpad(padded), padded, steps, counter=initial)
+    return ModeResult("CTR", "decrypt", _finish(padded, strip_padding), padded, steps, counter=initial)
 
 
 # --------------------------------------------------------------------------
@@ -300,15 +310,15 @@ _DECRYPT: Dict[str, Callable[..., ModeResult]] = {
 }
 
 
-def _dispatch(table, mode: str, key: bytes, data: bytes, counter) -> ModeResult:
+def _dispatch(table, mode: str, key: bytes, data: bytes, counter, **kw) -> ModeResult:
     mode = mode.upper()
     if mode not in table:
         raise ValueError(f"Unknown mode '{mode}'. Choose one of {', '.join(MODE_NAMES)}.")
     if mode == "CTR":
         if counter is None:
             raise ValueError("CTR mode needs an initial counter value.")
-        return table[mode](key, data, counter)
-    return table[mode](key, data)          # ECB, or CBC/CFB/OFB with the zero IV
+        return table[mode](key, data, counter, **kw)
+    return table[mode](key, data, **kw)    # ECB, or CBC/CFB/OFB with the zero IV
 
 
 def encrypt(mode: str, key: bytes, plaintext: bytes, counter=None) -> ModeResult:
@@ -316,6 +326,8 @@ def encrypt(mode: str, key: bytes, plaintext: bytes, counter=None) -> ModeResult
     return _dispatch(_ENCRYPT, mode, key, plaintext, counter)
 
 
-def decrypt(mode: str, key: bytes, ciphertext: bytes, counter=None) -> ModeResult:
-    """Decrypt with any mode. `counter` is required for CTR only."""
-    return _dispatch(_DECRYPT, mode, key, ciphertext, counter)
+def decrypt(mode: str, key: bytes, ciphertext: bytes, counter=None,
+            strip_padding: bool = True) -> ModeResult:
+    """Decrypt with any mode. `counter` is required for CTR only.
+    With strip_padding=False the padding is kept (used to inspect damaged ciphertexts)."""
+    return _dispatch(_DECRYPT, mode, key, ciphertext, counter, strip_padding=strip_padding)

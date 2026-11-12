@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AES, step by step · EECE 455/632 Project 8</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%226%22 fill=%22%231f1e1b%22/%3E%3Ctext x=%2216%22 y=%2221%22 font-size=%2211%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22monospace%22%3EAES%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <script defer src="/static/vendor/katex/katex.min.js"></script>
+  <script defer src="/static/js/common.js"></script>
+  <script defer src="/static/js/aes.js"></script>
+  <script defer src="/static/js/keys.js"></script>
+  <script defer src="/static/js/modes.js"></script>
+  <script defer src="/static/js/lab.js"></script>
+  <script defer src="/static/js/main.js"></script>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="#home">
+    <span class="brand-mark">AES</span>
+    <span class="brand-text">step by step<small>EECE 455/632 · Project 8</small></span>
+  </a>
+  <nav class="nav">
+    <a href="#home" data-page="home">Overview</a>
+    <a href="#aes" data-page="aes"><span class="num">1</span>Inside AES</a>
+    <a href="#keys" data-page="keys"><span class="num">2</span>Key expansion</a>
+    <a href="#modes" data-page="modes"><span class="num">3</span>Modes of operation</a>
+    <a href="#lab" data-page="lab"><span class="num">4</span>Experiments</a>
+  </nav>
+</header>
+
+<main>
+
+<!-- =============================================================== HOME -->
+<section class="page" id="page-home">
+  <div class="hero">
+    <p class="kicker">An interactive companion to the Advanced Encryption Standard</p>
+    <h1>See how AES turns 16 bytes of plaintext into ciphertext, and how the five modes of operation encrypt whole messages.</h1>
+    <p class="lead">Every value on these pages is computed live by this project's own from-scratch
+      AES-128 implementation (<code>aesmodes/aes_core.py</code>) and modes
+      (<code>aesmodes/modes.py</code>). Nothing comes from an external crypto library.</p>
+  </div>
+
+  <div class="cards4">
+    <a class="card-link" href="#aes"><span class="num big">1</span><h3>Inside AES</h3>
+      <p>Watch one block go through the 10 rounds: SubBytes, ShiftRows, MixColumns and AddRoundKey, each one animated and explained.</p></a>
+    <a class="card-link" href="#keys"><span class="num big">2</span><h3>Key expansion</h3>
+      <p>See how the 16-byte key grows into 44 words, one round key per round, with RotWord, SubWord and Rcon.</p></a>
+    <a class="card-link" href="#modes"><span class="num big">3</span><h3>Modes of operation</h3>
+      <p>Encrypt a real message in ECB, CBC, CFB, OFB and CTR and follow every block through the chaining diagram.</p></a>
+    <a class="card-link" href="#lab"><span class="num big">4</span><h3>Experiments</h3>
+      <p>Encrypt a picture to see why ECB leaks patterns, and flip a single bit to see how errors spread in each mode.</p></a>
+  </div>
+
+  <div class="two-col">
+    <article class="paper">
+      <h2><span class="secnum">§1</span>What AES does</h2>
+      <p>AES is a <em>block cipher</em>: it takes exactly <strong>16 bytes</strong> (128 bits) of
+        plaintext and a 16-byte key, and produces 16 bytes of ciphertext. The bytes are arranged in a
+        4&thinsp;×&thinsp;4 grid called the <em>state</em>, and the same four operations are applied
+        round after round:</p>
+      <div id="home-rounds" class="round-diagram"></div>
+      <p>Each operation has a job. <span class="op-tag op-sub">SubBytes</span> adds
+        <em>confusion</em>, meaning a non-linear relation between key and ciphertext.
+        <span class="op-tag op-shift">ShiftRows</span> and <span class="op-tag op-mix">MixColumns</span>
+        add <em>diffusion</em>, spreading every input bit over the whole block.
+        <span class="op-tag op-ark">AddRoundKey</span> mixes in the secret key.</p>
+    </article>
+    <article class="paper">
+      <h2><span class="secnum">§2</span>Why we need modes</h2>
+      <p>A real message is longer than 16 bytes. A <em>mode of operation</em> is the recipe for
+        cutting a message into blocks and connecting them:</p>
+      <ul class="modes-list">
+        <li><b class="mode-chip m-ECB">ECB</b> encrypts every block separately</li>
+        <li><b class="mode-chip m-CBC">CBC</b> XORs each block with the previous ciphertext first</li>
+        <li><b class="mode-chip m-CFB">CFB</b> encrypts the previous ciphertext and XORs the result</li>
+        <li><b class="mode-chip m-OFB">OFB</b> keeps encrypting its own output to make a keystream</li>
+        <li><b class="mode-chip m-CTR">CTR</b> encrypts a counter to make a keystream</li>
+      </ul>
+      <blockquote class="spec"><b>Project specification.</b> Implement AES in 5 modes: ECB, CBC, CFB,
+        OFB, and Counter mode where the user will set the initial counter value (padding of last block
+        should be done with zeroes along with count of pad size; Initial vectors should be set to
+        zeroes).</blockquote>
+    </article>
+  </div>
+</section>
+
+<!-- =============================================================== AES -->
+<section class="page" id="page-aes">
+  <div class="page-head">
+    <h1><span class="secnum">1</span>Inside AES-128</h1>
+    <p class="lead">Encrypt one 16-byte block and step through all 41 intermediate states. Use the
+      buttons, the timeline or your keyboard's <kbd>←</kbd> <kbd>→</kbd> keys.</p>
+  </div>
+
+  <div class="controls paper">
+    <label class="field grow"><span>Key <i>K</i> (32 hex digits)</span>
+      <input id="aes-key" class="mono" spellcheck="false"></label>
+    <label class="field grow">Plaintext block
+      <div class="input-with-toggle">
+        <input id="aes-block" class="mono" spellcheck="false">
+        <div class="seg" id="aes-fmt"><button data-v="hex" class="on">hex</button><button data-v="text">text</button></div>
+      </div></label>
+    <div class="field-buttons">
+      <button class="btn primary" id="aes-run">Encrypt</button>
+      <button class="btn" id="aes-example" title="The worked example from FIPS-197, Appendix B">FIPS-197 example</button>
+    </div>
+  </div>
+  <p class="note" id="aes-note" hidden></p>
+  <p class="error" id="aes-error" hidden></p>
+
+  <div class="timeline paper" id="aes-timeline"></div>
+
+  <div class="player">
+    <button class="btn icon" id="aes-first" title="First step">⏮</button>
+    <button class="btn icon" id="aes-prev" title="Previous step (←)">◀</button>
+    <button class="btn icon play" id="aes-play" title="Play / pause">▶</button>
+    <button class="btn icon" id="aes-next" title="Next step (→)">▶︎▶︎</button>
+    <button class="btn icon" id="aes-last" title="Last step">⏭</button>
+    <input type="range" id="aes-slider" min="0" max="40" value="0">
+    <span class="step-count" id="aes-count"></span>
+  </div>
+
+  <div class="stage paper" id="aes-stage"></div>
+
+  <div class="paper">
+    <h2><span class="secnum">1.1</span>The journey of the state</h2>
+    <p class="muted">The state at the end of each round. Colors follow the byte values, so you can
+      watch the plaintext's structure dissolve. Click a round to jump to it.</p>
+    <div class="journey" id="aes-journey"></div>
+    <p class="result-line">Ciphertext&nbsp; <code id="aes-ct" class="mono big"></code></p>
+  </div>
+</section>
+
+<!-- =============================================================== KEYS -->
+<section class="page" id="page-keys">
+  <div class="page-head">
+    <h1><span class="secnum">2</span>Key expansion</h1>
+    <p class="lead">AES-128 needs 11 round keys (one before the rounds plus one per round). The key
+      schedule stretches the 16-byte key into 44 four-byte words
+      <i>w</i><sub>0</sub>…<i>w</i><sub>43</sub>; round key <i>r</i> is
+      <i>w</i><sub>4r</sub>…<i>w</i><sub>4r+3</sub>.</p>
+  </div>
+  <div class="controls paper">
+    <label class="field grow"><span>Key <i>K</i> (32 hex digits)</span>
+      <input id="keys-key" class="mono" spellcheck="false"></label>
+    <div class="field-buttons"><button class="btn primary" id="keys-run">Expand key</button></div>
+  </div>
+  <p class="error" id="keys-error" hidden></p>
+  <div class="two-col keys-layout">
+    <div class="paper">
+      <h2><span class="secnum">2.1</span>All 44 words</h2>
+      <p class="muted">Click any word to see how it was computed.</p>
+      <div id="keys-grid" class="keys-grid"></div>
+    </div>
+    <div class="paper" id="keys-detail"></div>
+  </div>
+</section>
+
+<!-- =============================================================== MODES -->
+<section class="page" id="page-modes">
+  <div class="page-head">
+    <h1><span class="secnum">3</span>Modes of operation</h1>
+    <p class="lead">Encrypt or decrypt a whole message. The diagram shows every block with its real
+      values; click a block to see its computation.</p>
+  </div>
+
+  <div class="mode-tabs" id="mode-tabs"></div>
+
+  <div class="controls paper">
+    <div class="seg big" id="mode-op"><button data-v="encrypt" class="on">Encrypt</button><button data-v="decrypt">Decrypt</button></div>
+    <label class="field grow"><span>Key <i>K</i> (32 hex digits)</span>
+      <input id="mode-key" class="mono" spellcheck="false"></label>
+    <label class="field grow2"><span id="mode-data-label">Message</span>
+      <div class="input-with-toggle">
+        <input id="mode-data" spellcheck="false">
+        <div class="seg" id="mode-fmt"><button data-v="text" class="on">text</button><button data-v="hex">hex</button></div>
+      </div></label>
+    <label class="field" id="mode-iv-field"><span>Initial vector <i>IV</i> (fixed: zeros)</span>
+      <input id="mode-iv" class="mono" value="00000000000000000000000000000000" readonly title="Fixed to zeros by the project specification"></label>
+    <label class="field" id="mode-ctr-field" hidden><span>Initial counter <i>T</i><sub>1</sub> (hex, you choose)</span>
+      <input id="mode-ctr" class="mono" spellcheck="false" value="00000000000000000000000000000001"></label>
+    <div class="field-buttons"><button class="btn primary" id="mode-run">Run</button></div>
+  </div>
+  <p class="error" id="mode-error" hidden></p>
+
+  <div class="two-col mode-layout">
+    <article class="paper" id="mode-explain"></article>
+    <article class="paper" id="mode-padding"></article>
+  </div>
+
+  <div class="paper">
+    <h2><span class="secnum">3.3</span>Block by block</h2>
+    <div class="chain-wrap"><div id="mode-chain"></div></div>
+    <div id="mode-block-detail" class="block-detail"></div>
+  </div>
+
+  <div class="paper" id="mode-result"></div>
+</section>
+
+<!-- =============================================================== LAB -->
+<section class="page" id="page-lab">
+  <div class="page-head">
+    <h1><span class="secnum">4</span>Experiments</h1>
+    <p class="lead">Three experiments that show what the formulas mean in practice. All use the key
+      from the other pages.</p>
+  </div>
+
+  <div class="paper">
+    <h2><span class="secnum">4.1</span>The ECB picture problem</h2>
+    <p>An image is just bytes. Below, the same picture is encrypted with each mode, and the encrypted
+      bytes are drawn back as pixels. ECB turns equal 16-byte blocks into equal ciphertext blocks, so
+      large areas of one color keep their shape. The other modes chain or randomize the blocks, so you
+      only see noise.</p>
+    <div class="lab-controls">
+      <button class="btn primary" id="img-run">Encrypt the picture</button>
+      <label class="btn">Use your own image…<input type="file" id="img-file" accept="image/*" hidden></label>
+      <span class="muted" id="img-status"></span>
+    </div>
+    <div class="img-grid" id="img-grid"></div>
+  </div>
+
+  <div class="paper">
+    <h2><span class="secnum">4.2</span>Flip one bit: error propagation</h2>
+    <p>Encrypt a message, flip <em>one</em> bit of the ciphertext (as a noisy channel might), then
+      decrypt. Each cell shows how many plaintext bits came out wrong in that block.</p>
+    <div class="controls inline">
+      <label class="field grow2">Message
+        <input id="flip-msg" value="Four score and seven years ago our fathers brought forth on this continent"></label>
+      <label class="field"><span>Flip byte <b id="flip-byte-val">3</b></span>
+        <input type="range" id="flip-byte" min="0" max="79" value="3"></label>
+      <label class="field"><span>Bit <b id="flip-bit-val">0</b></span>
+        <input type="range" id="flip-bit" min="0" max="7" value="0"></label>
+    </div>
+    <div id="flip-table"></div>
+    <div class="legend"><span class="sw sw0"></span>no error <span class="sw sw1"></span>1 bit wrong
+      <span class="sw sw2"></span>whole block garbled (~64 bits)</div>
+  </div>
+
+  <div class="paper">
+    <h2><span class="secnum">4.3</span>What a zero IV gives away</h2>
+    <p>The specification fixes the IV to zeros. That makes results reproducible, but it also means
+      <em>the same message always gives the same ciphertext</em>, and two messages that start the same
+      way share ciphertext blocks. Compare two messages below; matching ciphertext blocks are highlighted.</p>
+    <div class="controls inline">
+      <label class="field grow2">Message A <input id="iv-a" value="Meet me at the library at 5pm. Bring the notes!"></label>
+      <label class="field grow2">Message B <input id="iv-b" value="Meet me at the library at 7pm. Bring the notes!"></label>
+      <div class="field-buttons"><button class="btn primary" id="iv-run">Compare</button></div>
+    </div>
+    <div id="iv-table"></div>
+  </div>
+
+  <div class="paper">
+    <h2><span class="secnum">4.4</span>The five modes side by side</h2>
+    <div id="cmp-table"></div>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  AES-128 (FIPS-197) and modes of operation (NIST SP 800-38A), implemented from scratch for
+  EECE 455/632. Educational use only. <span id="version"></span>
+</footer>
+</body>
+</html>
