@@ -44,4 +44,4 @@ __all__ = [
     "cfb_encrypt", "cfb_decrypt", "ofb_encrypt", "ofb_decrypt",
     "ctr_encrypt", "ctr_decrypt",
 ]
-__version__ = "0.5.0"
+__version__ = "0.6.0"

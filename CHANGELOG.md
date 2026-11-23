@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented here, one entry per development step.
 
+## [0.6.0] – Step 10: the learning app online
+### Added
+- The learning app is published on GitHub Pages (https://nourkhatib22.github.io/aes-modes-of-operation/). It runs the project's own Python code in
+  the browser with Pyodide, so it needs no installation and no server.
+- `aesmodes/api.py`: the request handlers, now shared by the Flask server and the browser version.
+- `tools/build_site.py`: builds the web version; `.github/workflows/pages.yml` runs the tests and
+  publishes the site on every push to `main`.
+- `tests/test_api_and_site.py`: handler tests, a standard-library-only check for the browser files,
+  and build tests (214 tests in total).
+### Changed
+- MixColumns uses precomputed GF(2⁸) multiplication tables: about 5× faster (same results).
+- The page uses relative paths and shows a loading screen while Python starts in the browser.
+
 ## [0.5.0] – Step 9: AES-192 and AES-256
 ### Added
 - `aes_core.py`: the `AES` class now supports 128-, 192- and 256-bit keys (10, 12 or 14 rounds). The key

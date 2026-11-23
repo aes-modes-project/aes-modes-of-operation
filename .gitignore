@@ -21,3 +21,6 @@ htmlcov/
 !.vscode/extensions.json
 .idea/
 .DS_Store
+
+# Web version build output (tools/build_site.py)
+_site/

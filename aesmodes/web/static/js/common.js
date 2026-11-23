@@ -15,11 +15,73 @@ const App = {
 };
 
 /* ------------------------------------------------------------ server calls */
+/* The app can run in two ways, with exactly the same Python code behind it:
+     "server"  - started with `python -m aesmodes.web`; requests go to the Flask server.
+     "browser" - the web version (GitHub Pages); there is no server, so the browser
+                 loads Python (Pyodide) and runs aesmodes/api.py itself.
+   The choice is made automatically: if /api/version answers, a server is running. */
+const PYODIDE_BASE = "static/vendor/pyodide/";
+const PY_FILES = ["__init__.py", "aes_core.py", "padding.py", "modes.py", "explain.py", "api.py"];
+
+App.ready = (async () => {
+  try {
+    const r = await fetch("api/version", { cache: "no-store" });
+    const ct = r.headers.get("content-type") || "";
+    if (r.ok && ct.includes("json")) { App.backend = "server"; return; }
+  } catch (e) { /* no server: fall through to the in-browser version */ }
+  App.backend = "browser";
+  await startPyodide();
+})();
+
+async function startPyodide() {
+  const overlay = document.getElementById("py-loading");
+  const step = (t) => { const s = document.getElementById("py-loading-step"); if (s) s.textContent = t; };
+  if (overlay) overlay.hidden = false;
+  try {
+    step("Downloading the Python runtime…");
+    await new Promise((ok, fail) => {
+      const s = document.createElement("script");
+      s.src = PYODIDE_BASE + "pyodide.js"; s.onload = ok;
+      s.onerror = () => fail(new Error("Could not load Pyodide."));
+      document.head.append(s);
+    });
+    const py = await loadPyodide({ indexURL: PYODIDE_BASE });
+    step("Loading the project's Python files…");
+    py.FS.mkdirTree("/home/pyodide/aesmodes");
+    for (const f of PY_FILES) {
+      const res = await fetch(`py/aesmodes/${f}`, { cache: "no-cache" });
+      if (!res.ok) throw new Error(`Could not load ${f}.`);
+      py.FS.writeFile(`/home/pyodide/aesmodes/${f}`, await res.text());
+    }
+    py.runPython(`
+import json, sys
+sys.path.insert(0, "/home/pyodide")
+from aesmodes.api import handle
+def _js_handle(method, path, body_json):
+    status, data = handle(method, path, json.loads(body_json) if body_json else {})
+    return json.dumps({"status": status, "data": data})
+`);
+    App.pyHandle = py.globals.get("_js_handle");
+    if (overlay) overlay.hidden = true;
+  } catch (err) {
+    step(`Sorry, Python could not start in this browser: ${err.message}`);
+    throw err;
+  }
+}
+
 async function api(path, body) {
+  await App.ready;
+  if (App.backend === "browser") {
+    await new Promise((r) => setTimeout(r, 0));        // let the page repaint before Python runs
+    const out = JSON.parse(App.pyHandle(body === undefined ? "GET" : "POST", path,
+      body === undefined ? "" : JSON.stringify(body)));
+    if (out.status >= 400) throw new Error(out.data.error || `Request failed (${out.status}).`);
+    return out.data;
+  }
   const opts = body === undefined ? {} : {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
   };
-  const res = await fetch(path, opts);
+  const res = await fetch(path.replace(/^\//, ""), opts);
   let data;
   try { data = await res.json(); } catch (e) { throw new Error("The server returned an invalid response."); }
   if (!res.ok) throw new Error(data.error || `Request failed (${res.status}).`);

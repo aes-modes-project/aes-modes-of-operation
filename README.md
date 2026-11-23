@@ -2,6 +2,12 @@
 
 **EECE 455/632 – Cryptography and Network Security · Project 8**
 
+[![Tests and web version](https://github.com/nourkhatib22/aes-modes-of-operation/actions/workflows/pages.yml/badge.svg)](https://github.com/nourkhatib22/aes-modes-of-operation/actions/workflows/pages.yml)
+
+### ▶ Open the learning app: **[nourkhatib22.github.io/aes-modes-of-operation](https://nourkhatib22.github.io/aes-modes-of-operation/)**
+
+No installation needed: the app runs the project's own Python code directly in your browser.
+
 An educational implementation of **AES** (with **128-, 192- and 256-bit keys**) written from scratch in Python, together with its five
 classic **modes of operation**: ECB, CBC, CFB, OFB and Counter (CTR). It comes with an interactive
 **learning app** with a LaTeX-inspired look. It animates every step of AES (SubBytes, ShiftRows,
@@ -41,7 +47,8 @@ experiments such as the famous "ECB picture".
 - [x] **Step 7 – CTR mode** (user-defined initial counter)
 - [x] **Step 8 – Learning app**: AES step-by-step visualizer, key expansion, mode diagrams, experiments ([docs](docs/web-app.md))
 - [x] **Step 9 – AES-192 and AES-256**: all three key sizes in the core, all five modes and the learning app
-- [ ] **Step 10 – Report material**: mode comparison ([done](docs/modes-comparison.md)), ECB-pattern and error-propagation demos (in the app), written report
+- [x] **Step 10 – Web version**: the learning app online on GitHub Pages, with tests run on every push
+- [ ] **Step 11 – Report material**: mode comparison ([done](docs/modes-comparison.md)), ECB-pattern and error-propagation demos (in the app), written report
 
 ## Repository structure
 
@@ -54,6 +61,7 @@ aes-modes-of-operation/
 │   ├── padding.py         # zeros + pad-count padding
 │   ├── modes.py           # ECB, CBC, CFB, OFB, CTR
 │   ├── explain.py         # step-by-step data for the learning app
+│   ├── api.py             # request handlers, shared by the local server and the web version
 │   └── web/               # the learning app (python -m aesmodes.web)
 │       ├── server.py      # Flask server: calls the code above, returns JSON
 │       └── static/        # index.html, css/, js/, vendor/katex/
@@ -75,6 +83,10 @@ aes-modes-of-operation/
 │   ├── modes-comparison.md   # all five modes side by side
 │   ├── web-app.md         # how the learning app works
 │   └── images/            # screenshots
+├── tools/
+│   └── build_site.py      # builds the web version (GitHub Pages)
+├── .github/workflows/
+│   └── pages.yml          # on every push: run the tests, then publish the web version
 ├── CHANGELOG.md           # what changed in each step
 ├── requirements.txt       # runtime dependencies
 ├── requirements-dev.txt   # testing dependencies
@@ -115,9 +127,13 @@ use the **Testing** sidebar to run the tests.
 
 ## The learning app
 
-```bash
-python -m aesmodes.web
-```
+There are two ways to open it, and both run the same code:
+
+- **Online:** **https://nourkhatib22.github.io/aes-modes-of-operation/**. GitHub publishes it automatically after every push to `main`, once the
+  tests pass. The browser loads Python (Pyodide) and runs the project's own `aesmodes/*.py` files,
+  so no server is needed. The first visit takes a few seconds to load.
+- **On your computer:** `python -m aesmodes.web` starts a local Python server at
+  http://127.0.0.1:8455. This also works offline, for example during a presentation.
 
 | Section | What it teaches |
 |---|---|
@@ -188,7 +204,7 @@ All five modes are checked against the **NIST SP 800-38A** test vectors (F.1.1, 
 F.5.1), against `pycryptodome` with the zero IV, with round trips for many message lengths, and with
 error-propagation tests that confirm the behaviour described in
 [docs/modes-comparison.md](docs/modes-comparison.md). AES-192 and AES-256 are also checked against the NIST SP 800-38A vectors in every mode.
-Run `python -m pytest -v` to see all 204 tests.
+Run `python -m pytest -v` to see all 214 tests. GitHub runs them too, on every push.
 
 ## References
 

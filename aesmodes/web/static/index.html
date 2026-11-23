@@ -5,17 +5,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AES, step by step · EECE 455/632 Project 8</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%226%22 fill=%22%231f1e1b%22/%3E%3Ctext x=%2216%22 y=%2221%22 font-size=%2211%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22monospace%22%3EAES%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/static/vendor/katex/katex.min.css">
-  <link rel="stylesheet" href="/static/css/style.css">
-  <script defer src="/static/vendor/katex/katex.min.js"></script>
-  <script defer src="/static/js/common.js"></script>
-  <script defer src="/static/js/aes.js"></script>
-  <script defer src="/static/js/keys.js"></script>
-  <script defer src="/static/js/modes.js"></script>
-  <script defer src="/static/js/lab.js"></script>
-  <script defer src="/static/js/main.js"></script>
+  <link rel="stylesheet" href="static/vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="static/css/style.css">
+  <script defer src="static/vendor/katex/katex.min.js"></script>
+  <script defer src="static/js/common.js"></script>
+  <script defer src="static/js/aes.js"></script>
+  <script defer src="static/js/keys.js"></script>
+  <script defer src="static/js/modes.js"></script>
+  <script defer src="static/js/lab.js"></script>
+  <script defer src="static/js/main.js"></script>
 </head>
 <body>
+
+<div id="py-loading" hidden>
+  <div class="py-card">
+    <div class="spinner big"></div>
+    <h2>Loading Python in your browser…</h2>
+    <p>This web version runs the project's own Python code (<code>aes_core.py</code>, <code>modes.py</code>, …)
+      directly in your browser with Pyodide. The first visit downloads about 10&nbsp;MB, so it takes a few
+      seconds; after that it's cached.</p>
+    <p class="muted" id="py-loading-step">Starting…</p>
+  </div>
+</div>
 
 <header class="topbar">
   <a class="brand" href="#home">

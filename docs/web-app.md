@@ -1,6 +1,6 @@
 # The learning app
 
-Folder: [`aesmodes/web/`](../aesmodes/web/) · Start it with `python -m aesmodes.web`
+Folder: [`aesmodes/web/`](../aesmodes/web/) · Online at **https://nourkhatib22.github.io/aes-modes-of-operation/** · Locally: `python -m aesmodes.web`
 
 The app is a local web page that **teaches** AES and its modes visually. It runs on your own computer:
 a small Python server (Flask) calls the project's AES and modes code, and your browser draws the
@@ -16,7 +16,39 @@ results. No cryptography is done in JavaScript. Every number on screen comes fro
  └──────────────────────────┘         └───────────────────────────────┘
 ```
 
-## Running it
+## Two ways to run it
+
+| | Online (GitHub Pages) | Local |
+|---|---|---|
+| How to open | https://nourkhatib22.github.io/aes-modes-of-operation/ | `python -m aesmodes.web` → http://127.0.0.1:8455 |
+| Where the Python runs | in your browser, with [Pyodide](https://pyodide.org) (Python compiled to WebAssembly) | in the Flask server on your computer |
+| Needs installing | nothing | Python + `pip install -r requirements.txt` |
+| Works offline | no | yes |
+| Updated | automatically after every push to `main` | when you pull the latest code |
+
+Both versions use the **same request handlers** (`aesmodes/api.py`), which call the same AES and
+modes code, so they always give identical results. When the page loads, it tries `api/version`. If a
+local server answers, it uses the server; otherwise it loads Pyodide and the files
+`aesmodes/{__init__,aes_core,padding,modes,explain,api}.py`, and runs them in the browser. The footer
+shows which one is in use.
+
+### How the online version is published
+
+`.github/workflows/pages.yml` runs on every push to `main`:
+
+1. **test**: installs `requirements-dev.txt` and runs all tests. If any test fails, nothing is published.
+2. **deploy**: downloads Pyodide with `npm pack pyodide@0.26.4`, runs
+   `python tools/build_site.py --pyodide <folder>`, and publishes the resulting `_site/` folder to GitHub
+   Pages.
+
+One-time setup (already done for this repo): **Settings → Pages → Build and deployment → Source: GitHub
+Actions**.
+
+To build the web version yourself: download Pyodide (`npm pack pyodide@0.26.4 && tar xzf pyodide-*.tgz`),
+then run `python tools/build_site.py --pyodide package` and serve `_site/` with any web server, for
+example `python -m http.server -d _site`.
+
+## Running it locally
 
 ```bash
 source .venv/bin/activate
@@ -97,7 +129,10 @@ after decrypting with the wrong key.
 | File | Purpose |
 |---|---|
 | `aesmodes/explain.py` | records intermediate values from the core code in JSON form |
-| `aesmodes/web/server.py` | Flask routes |
+| `aesmodes/api.py` | the request handlers, shared by the Flask server and the in-browser version |
+| `aesmodes/web/server.py` | Flask server: passes `/api/...` requests to `api.py` |
+| `tools/build_site.py` | builds the online version into `_site/` |
+| `.github/workflows/pages.yml` | runs the tests and publishes the online version |
 | `aesmodes/web/__main__.py` | `python -m aesmodes.web` entry point |
 | `static/index.html` | page structure and the written explanations |
 | `static/css/style.css` | the LaTeX-style look (Computer Modern fonts from KaTeX) |

@@ -33,6 +33,9 @@
     homeDiagram();
     window.addEventListener("hashchange", show);
     show();
-    api("/api/version").then((v) => { $("#version").textContent = `· aesmodes v${v.version}`; }).catch(() => {});
+    api("/api/version").then((v) => {
+      $("#version").textContent = `· aesmodes v${v.version} · ` +
+        (App.backend === "browser" ? "running in your browser (Pyodide)" : "running on the local Python server");
+    }).catch(() => {});
   });
 })();

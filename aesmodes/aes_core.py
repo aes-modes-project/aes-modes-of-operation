@@ -188,6 +188,12 @@ _MIX = [[2, 3, 1, 1], [1, 2, 3, 1], [1, 1, 2, 3], [3, 1, 1, 2]]
 _INV_MIX = [[14, 11, 13, 9], [9, 14, 11, 13], [13, 9, 14, 11], [11, 13, 9, 14]]
 
 
+# Multiplication tables for the constants used by (Inv)MixColumns:
+# MUL[c][x] = c * x in GF(2^8). They are computed with gmul() above, once, so
+# MixColumns does a table lookup instead of repeating the same multiplications.
+MUL = {c: [gmul(c, x) for x in range(256)] for c in (1, 2, 3, 9, 11, 13, 14)}
+
+
 def _mix(s: State, m: List[List[int]]) -> State:
     out = [[0] * 4 for _ in range(4)]
     for c in range(4):
@@ -195,7 +201,7 @@ def _mix(s: State, m: List[List[int]]) -> State:
         for r in range(4):
             v = 0
             for k in range(4):
-                v ^= gmul(m[r][k], col[k])
+                v ^= MUL[m[r][k]][col[k]]
             out[r][c] = v
     return out
 

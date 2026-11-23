@@ -347,3 +347,8 @@ table.booktabs td.c, table.booktabs th.c { text-align: center; }
 .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--rule-strong); border-top-color: var(--ink);
   border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -2px; }
 @keyframes spin { to { transform: rotate(360deg); } }
+.spinner.big { width: 34px; height: 34px; border-width: 3px; margin-bottom: 10px; }
+#py-loading { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
+  background: rgba(251, 250, 246, 0.96); }
+#py-loading .py-card { max-width: 520px; text-align: center; background: var(--sheet); border: 1px solid var(--rule);
+  border-radius: 12px; padding: 28px 32px; }
