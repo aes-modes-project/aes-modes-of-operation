@@ -51,7 +51,7 @@ App.pages.modes = (() => {
 
   /* ---------------------------------------------------------------- setup */
   function init() {
-    bindKeyInput($("#mode-key"));
+    bindKeyInput($("#mode-key"), () => { if (result) run(); });
     $("#mode-data").value = "Hello, AES modes! This message is longer than one block.";
     op = segmented("mode-op", onOpChange);
     fmt = segmented("mode-fmt");
@@ -303,6 +303,7 @@ App.pages.modes = (() => {
     const dec = r.operation === "decrypt";
     const rows = [
       ["mode", `${r.mode}${r.iv ? " (IV = 00…00)" : ""}${r.counter ? ` (T₁ = ${r.counter})` : ""}`],
+      ["cipher", `AES-${r.keyBits} (${{ 128: 10, 192: 12, 256: 14 }[r.keyBits]} rounds per block)`],
       [dec ? "plaintext (hex)" : "ciphertext (hex)", groupHex(r.output)],
       dec ? ["plaintext (text)", r.outputText === null ? "(not valid UTF-8 text)" : r.outputText] : null,
       ["length", `${r.output.length / 2} bytes${dec ? "" : ` (${r.messageLength} message + ${r.padCount} padding)`}`],

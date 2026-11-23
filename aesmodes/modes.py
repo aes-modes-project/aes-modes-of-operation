@@ -1,5 +1,6 @@
 """
-modes.py - AES-128 modes of operation: ECB, CBC, CFB, OFB and CTR.
+modes.py - AES modes of operation: ECB, CBC, CFB, OFB and CTR
+(for AES-128, AES-192 and AES-256: the key length selects the variant).
 
 Every function returns a `ModeResult` containing the output bytes and one
 `BlockStep` per block. A BlockStep records exactly what happened to that block
@@ -7,7 +8,7 @@ Every function returns a `ModeResult` containing the output bytes and one
 mode step by step.
 
 Conventions (from the project specification):
-    * key       : 16 bytes (AES-128)
+    * key       : 16, 24 or 32 bytes (AES-128 / AES-192 / AES-256)
     * padding   : zeros + pad-count byte (see padding.py), applied in ALL modes
     * IV        : 16 zero bytes for CBC / CFB / OFB
     * CTR       : initial counter chosen by the user, +1 per block (mod 2^128)
@@ -23,7 +24,7 @@ Notation used in the comments:
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional, Union
 
-from .aes_core import AES128
+from .aes_core import AES, key_params
 from .padding import BLOCK_SIZE, pad, unpad
 
 ZERO_IV = bytes(BLOCK_SIZE)
@@ -71,8 +72,7 @@ def split_blocks(data: bytes) -> List[bytes]:
 
 
 def _check_key(key: bytes) -> None:
-    if len(key) != 16:
-        raise ValueError("Key must be exactly 16 bytes (32 hex digits) for AES-128.")
+    key_params(key)          # raises ValueError unless the key is 16, 24 or 32 bytes
 
 
 def _check_iv(iv: bytes) -> None:
@@ -126,7 +126,7 @@ def counter_block(initial: int, i: int) -> bytes:
 # --------------------------------------------------------------------------
 def ecb_encrypt(key: bytes, plaintext: bytes) -> ModeResult:
     _check_key(key)
-    aes = AES128(key)
+    aes = AES(key)
     padded = pad(plaintext)
     steps, out = [], b""
     for i, p in enumerate(split_blocks(padded), start=1):
@@ -140,7 +140,7 @@ def ecb_decrypt(key: bytes, ciphertext: bytes,
                 strip_padding: bool = True) -> ModeResult:
     _check_key(key)
     _check_ciphertext(ciphertext)
-    aes = AES128(key)
+    aes = AES(key)
     steps, padded = [], b""
     for i, c in enumerate(split_blocks(ciphertext), start=1):
         p = aes.decrypt_block(c)
@@ -156,7 +156,7 @@ def ecb_decrypt(key: bytes, ciphertext: bytes,
 def cbc_encrypt(key: bytes, plaintext: bytes, iv: bytes = ZERO_IV) -> ModeResult:
     _check_key(key)
     _check_iv(iv)
-    aes = AES128(key)
+    aes = AES(key)
     padded = pad(plaintext)
     steps, out, prev = [], b"", iv
     for i, p in enumerate(split_blocks(padded), start=1):
@@ -174,7 +174,7 @@ def cbc_decrypt(key: bytes, ciphertext: bytes, iv: bytes = ZERO_IV,
     _check_key(key)
     _check_iv(iv)
     _check_ciphertext(ciphertext)
-    aes = AES128(key)
+    aes = AES(key)
     steps, padded, prev = [], b"", iv
     for i, c in enumerate(split_blocks(ciphertext), start=1):
         d = aes.decrypt_block(c)
@@ -194,7 +194,7 @@ def cbc_decrypt(key: bytes, ciphertext: bytes, iv: bytes = ZERO_IV,
 def cfb_encrypt(key: bytes, plaintext: bytes, iv: bytes = ZERO_IV) -> ModeResult:
     _check_key(key)
     _check_iv(iv)
-    aes = AES128(key)
+    aes = AES(key)
     padded = pad(plaintext)
     steps, out, prev = [], b"", iv
     for i, p in enumerate(split_blocks(padded), start=1):
@@ -212,7 +212,7 @@ def cfb_decrypt(key: bytes, ciphertext: bytes, iv: bytes = ZERO_IV,
     _check_key(key)
     _check_iv(iv)
     _check_ciphertext(ciphertext)
-    aes = AES128(key)
+    aes = AES(key)
     steps, padded, prev = [], b"", iv
     for i, c in enumerate(split_blocks(ciphertext), start=1):
         o = aes.encrypt_block(prev)
@@ -230,7 +230,7 @@ def cfb_decrypt(key: bytes, ciphertext: bytes, iv: bytes = ZERO_IV,
 #   The keystream O_i does not depend on the message.
 # --------------------------------------------------------------------------
 def _ofb(key: bytes, data: bytes, iv: bytes, decrypting: bool) -> List[BlockStep]:
-    aes = AES128(key)
+    aes = AES(key)
     steps, prev = [], iv
     for i, blk in enumerate(split_blocks(data), start=1):
         o = aes.encrypt_block(prev)
@@ -267,7 +267,7 @@ def ofb_decrypt(key: bytes, ciphertext: bytes, iv: bytes = ZERO_IV,
 #   C_i = P_i (+) E_K(T_i)        P_i = C_i (+) E_K(T_i)
 # --------------------------------------------------------------------------
 def _ctr(key: bytes, data: bytes, initial: int, decrypting: bool) -> List[BlockStep]:
-    aes = AES128(key)
+    aes = AES(key)
     steps = []
     for i, blk in enumerate(split_blocks(data), start=1):
         t = counter_block(initial, i - 1)

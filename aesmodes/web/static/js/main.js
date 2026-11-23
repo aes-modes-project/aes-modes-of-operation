@@ -11,9 +11,9 @@
     const arrow = () => el("span", { class: "arrow" }, "→");
     d.append(
       el("span", { class: "box" }, "plaintext"), arrow(), tag("op-ark", "AddRoundKey"), arrow(),
-      el("span", { class: "loop", "data-label": "rounds 1–9" }, tag("op-sub", "SubBytes"), tag("op-shift", "ShiftRows"), tag("op-mix", "MixColumns"), tag("op-ark", "AddRoundKey")),
+      el("span", { class: "loop", "data-label": "rounds 1 … Nr−1" }, tag("op-sub", "SubBytes"), tag("op-shift", "ShiftRows"), tag("op-mix", "MixColumns"), tag("op-ark", "AddRoundKey")),
       arrow(),
-      el("span", { class: "loop", "data-label": "round 10" }, tag("op-sub", "SubBytes"), tag("op-shift", "ShiftRows"), tag("op-ark", "AddRoundKey")),
+      el("span", { class: "loop", "data-label": "final round Nr" }, tag("op-sub", "SubBytes"), tag("op-shift", "ShiftRows"), tag("op-ark", "AddRoundKey")),
       arrow(), el("span", { class: "box" }, "ciphertext"));
   }
 

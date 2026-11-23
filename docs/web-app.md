@@ -30,7 +30,11 @@ Stop it with **Ctrl+C**. The default port 8455 avoids port 5000, which macOS use
 ## The four sections
 
 ### 1 · Inside AES
-Encrypts one 16-byte block and lets you step through all **41 intermediate states** (buttons, the
+Every key field has an **AES-128 / AES-192 / AES-256** selector. Choosing a size loads an example key
+of that length, and you can also type any key of 32, 48 or 64 hex digits.
+
+Encrypts one 16-byte block and lets you step through every intermediate state (**41, 49 or 57** for
+AES-128, AES-192 or AES-256; buttons, the
 timeline, the slider, or the ← → keys; space plays and pauses). Each operation has its own visual and
 explanation:
 
@@ -48,8 +52,9 @@ byte values, so you can see the plaintext's structure disappear.
 ![SubBytes step](images/aes-subbytes.png)
 
 ### 2 · Key expansion
-All 44 words of the key schedule. Clicking a word shows how it was computed. For words that start a
-round key, that includes RotWord → SubWord → ⊕ Rcon, then the XOR with the word four places back.
+All 44, 52 or 60 words of the key schedule. Clicking a word shows how it was computed: RotWord →
+SubWord → ⊕ Rcon every N<sub>k</sub> words, the extra SubWord step of AES-256, or the plain XOR with
+the word N<sub>k</sub> places back.
 
 ### 3 · Modes of operation
 Pick a mode, type a message, and encrypt or decrypt. The page shows:
@@ -78,8 +83,8 @@ Pick a mode, type a message, and encrypt or decrypt. The page shows:
 | Method | Path | Body | Returns |
 |---|---|---|---|
 | GET | `/api/sbox` | – | S-box and inverse S-box |
-| POST | `/api/aes` | `key`, `block`, `blockFormat` (`hex`/`text`) | 41 steps with before/after states, round keys, MixColumns detail |
-| POST | `/api/keys` | `key` | the 44 words and how each was computed |
+| POST | `/api/aes` | `key` (32/48/64 hex digits), `block`, `blockFormat` (`hex`/`text`) | 41/49/57 steps with before/after states, round keys, MixColumns detail, `keyBits`, `rounds` |
+| POST | `/api/keys` | `key` | the 44/52/60 words and how each was computed |
 | POST | `/api/mode` | `mode`, `operation`, `key`, `data`, `dataFormat`, `counter` | output, padding, one record per block |
 | POST | `/api/bitflip` | `key`, `message`, `byte`, `bit`, `counter` | damaged bits per block for each mode |
 | POST | `/api/image` | `mode`, `key`, `pixels` (base64), `counter` | encrypted pixels (base64) |

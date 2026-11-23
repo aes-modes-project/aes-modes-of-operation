@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented here, one entry per development step.
 
+## [0.5.0] – Step 9: AES-192 and AES-256
+### Added
+- `aes_core.py`: the `AES` class now supports 128-, 192- and 256-bit keys (10, 12 or 14 rounds). The key
+  expansion handles N<sub>k</sub> = 4, 6 and 8, including AES-256's extra SubWord step. `AES128` remains as
+  another name for the class.
+- All five modes accept 16-, 24- or 32-byte keys.
+- Learning app: an AES-128 / 192 / 256 selector under every key field; the AES page, key expansion
+  page (52 / 60 words, AES-256 SubWord step) and explanations adapt to the key size; the FIPS-197
+  example button loads Appendix B, C.2 or C.3 depending on the size.
+- `tests/test_key_sizes.py`: FIPS-197 A.2/A.3 and C.1–C.3, NIST SP 800-38A first blocks for every mode
+  with AES-192/256, pycryptodome cross-checks, server tests (81 new tests, 204 in total).
+- CLI: `python -m aesmodes --key <48 or 64 hex digits>`.
+
 ## [0.4.0] – Step 8: the learning app
 ### Added
 - `aesmodes/web/`: an interactive learning app (`python -m aesmodes.web`), a Flask server plus a

@@ -14,13 +14,20 @@ App.pages.aes = (() => {
 
   /* ---------------------------------------------------------------- setup */
   function init() {
-    bindKeyInput($("#aes-key"));
+    bindKeyInput($("#aes-key"), () => run());
     $("#aes-block").value = "3243f6a8885a308d313198a2e0370734";
     fmt = segmented("aes-fmt");
     $("#aes-run").addEventListener("click", run);
+    // FIPS-197 worked examples: Appendix B for AES-128, Appendix C.2 / C.3 for AES-192 / AES-256
+    const EXAMPLES = {
+      128: ["2b7e151628aed2a6abf7158809cf4f3c", "3243f6a8885a308d313198a2e0370734"],
+      192: ["000102030405060708090a0b0c0d0e0f1011121314151617", "00112233445566778899aabbccddeeff"],
+      256: ["000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", "00112233445566778899aabbccddeeff"],
+    };
     $("#aes-example").addEventListener("click", () => {
-      App.setKey("2b7e151628aed2a6abf7158809cf4f3c"); syncKeyInputs();
-      $("#aes-block").value = "3243f6a8885a308d313198a2e0370734"; fmt.set("hex"); run();
+      const [k, p] = EXAMPLES[keyBits($("#aes-key").value) || 128];
+      App.setKey(k); syncKeyInputs();
+      $("#aes-block").value = p; fmt.set("hex"); run();
     });
     [$("#aes-key"), $("#aes-block")].forEach((i) => i.addEventListener("keydown", (e) => { if (e.key === "Enter") run(); }));
     $("#aes-first").addEventListener("click", () => go(0));
@@ -48,6 +55,7 @@ App.pages.aes = (() => {
     const note = $("#aes-note");
     note.hidden = !data.note; note.textContent = data.note || "";
     $("#aes-slider").max = data.steps.length - 1;
+    $("#aes-nsteps").textContent = data.steps.length;
     $("#aes-ct").textContent = groupHex(data.ciphertext);
     buildTimeline();
     buildJourney();
@@ -100,7 +108,7 @@ App.pages.aes = (() => {
           b.addEventListener("click", () => { stop(); go(i); });
           return b;
         }));
-      const label = r === "0" ? "start" : r === "10" ? "round 10" : `round ${r}`;
+      const label = r === "0" ? "start" : `round ${r}`;
       const g = el("div", { class: "tl-round" + (steps.length < 4 ? " r2" : "") }, el("span", { class: "rlabel" }, label), ops);
       g.style.flexGrow = steps.length;
       g.dataset.round = r;
@@ -128,9 +136,10 @@ App.pages.aes = (() => {
     const s = data.steps[cur];
     const stage = $("#aes-stage");
     stage.innerHTML = "";
-    const roundName = s.round === 0 ? "Initial step" : s.round === 10 ? "Round 10 (final round)" : `Round ${s.round}`;
+    const roundName = s.round === 0 ? "Initial step" : s.round === data.rounds ? `Round ${s.round} (final round)` : `Round ${s.round}`;
     stage.append(el("div", { class: "stage-head" },
       el("h2", {}, roundName), el("span", { class: `op-tag ${OPCLASS[s.op]}`, style: { fontSize: "16px" } }, s.op),
+      el("span", { class: "size-badge", title: `${data.keyBits}-bit key: ${data.rounds} rounds` }, `AES-${data.keyBits}`),
       el("span", { class: "muted", style: { marginLeft: "auto", fontSize: "14px" } }, describeRound(s))));
     const visual = el("div", { class: "visual" });
     const text = el("div", { class: "explain" });
@@ -139,8 +148,8 @@ App.pages.aes = (() => {
   }
 
   function describeRound(s) {
-    if (s.round === 0) return "AddRoundKey with the original key, before round 1";
-    if (s.round === 10) return "SubBytes → ShiftRows → AddRoundKey (no MixColumns)";
+    if (s.round === 0) return `AddRoundKey with round key K₀, before round 1 of ${data.rounds}`;
+    if (s.round === data.rounds) return "SubBytes → ShiftRows → AddRoundKey (no MixColumns)";
     return "SubBytes → ShiftRows → MixColumns → AddRoundKey";
   }
 
@@ -170,7 +179,7 @@ App.pages.aes = (() => {
     text.append(
       P("AES never works on the bytes as a flat list. It arranges them in a 4 × 4 grid called the <b>state</b>, filled <b>column by column</b>: bytes 0–3 form the first column, bytes 4–7 the second, and so on."),
       formula("s_{r,c} = \\text{in}[\\,r + 4c\\,], \\qquad 0 \\le r, c \\le 3"),
-      P("Every operation that follows changes this grid. At the end, it is read out column by column again to give the ciphertext."),
+      P(`Every operation that follows changes this grid. With a ${data.keyBits}-bit key, AES runs <b>${data.rounds} rounds</b> (10, 12 or 14 for 128-, 192- or 256-bit keys). The block itself is always 16 bytes. At the end, the state is read out column by column again to give the ciphertext.`),
       why("Why a grid? Two of the operations work on <i>rows</i> (ShiftRows) and on <i>columns</i> (MixColumns). Alternating between the two directions is what spreads every byte across the whole block."));
   }
 
@@ -192,7 +201,7 @@ App.pages.aes = (() => {
       el("table", { class: "bits-table" }, bitsRow("state", a), bitsRow("⊕ key", b), bitsRow("= result", o))));
     text.append(
       P(s.round === 0
-        ? "Before the first round, the state is combined with <b>round key 0</b>, which is simply the original key. Without this step, an attacker could undo the first round, since SubBytes and ShiftRows use no key."
+        ? `Before the first round, the state is combined with <b>round key 0</b>, which is ${data.keyBits === 128 ? "simply the original key" : `the first 16 bytes of the ${data.keyBits / 8}-byte key (the rest of the key is used in round key 1${data.keyBits === 256 ? "" : " and the key schedule"})`}. Without this step, an attacker could undo the first round, since SubBytes and ShiftRows use no key.`
         : `The state is combined with <b>round key ${s.round}</b>, produced by the <a href="#keys">key expansion</a>. This is the only step that uses the key.`),
       formula("s'_{r,c} = s_{r,c} \\oplus k_{r,c}"),
       P("⊕ is XOR: each bit of the result is 1 when exactly one of the two input bits is 1. XOR is its own inverse, so decryption undoes this step by XORing the same key again."),
@@ -303,7 +312,7 @@ App.pages.aes = (() => {
       P("Each <b>column</b> is treated as a vector of 4 bytes and multiplied by a fixed 4 × 4 matrix. Every output byte depends on all four input bytes of its column."),
       formula("\\begin{bmatrix}s'_{0,c}\\\\s'_{1,c}\\\\s'_{2,c}\\\\s'_{3,c}\\end{bmatrix} = \\begin{bmatrix}02&03&01&01\\\\01&02&03&01\\\\01&01&02&03\\\\03&01&01&02\\end{bmatrix}\\begin{bmatrix}s_{0,c}\\\\s_{1,c}\\\\s_{2,c}\\\\s_{3,c}\\end{bmatrix}"),
       P("The arithmetic happens in GF(2<sup>8</sup>): addition is XOR (⊕) and multiplication (•) is polynomial multiplication modulo <i>x</i><sup>8</sup> + <i>x</i><sup>4</sup> + <i>x</i><sup>3</sup> + <i>x</i> + 1. In practice, <code>02•x</code> means shift <i>x</i> left by one bit and XOR with <code>1b</code> if a bit fell off, and <code>03•x = 02•x ⊕ x</code>."),
-      why("Why? A change in one input byte changes all four bytes of the column. This is the second half of AES's <i>diffusion</i>. The final round skips MixColumns because it would add no security there."));
+      why(`Why? A change in one input byte changes all four bytes of the column. This is the second half of AES's <i>diffusion</i>. The final round (round ${data.rounds} for AES-${data.keyBits}) skips MixColumns because it would add no security there.`));
   }
 
   return { init, load, run };

@@ -2,7 +2,7 @@
 
 **EECE 455/632 – Cryptography and Network Security · Project 8**
 
-An educational implementation of **AES-128** written from scratch in Python, together with its five
+An educational implementation of **AES** (with **128-, 192- and 256-bit keys**) written from scratch in Python, together with its five
 classic **modes of operation**: ECB, CBC, CFB, OFB and Counter (CTR). It comes with an interactive
 **learning app** with a LaTeX-inspired look. It animates every step of AES (SubBytes, ShiftRows,
 MixColumns, AddRoundKey, key expansion), draws each mode block by block with real values, and includes
@@ -24,7 +24,7 @@ experiments such as the famous "ECB picture".
 
 | Requirement | How it is implemented |
 |---|---|
-| Block cipher | AES-128 (FIPS-197), implemented from scratch: no crypto library is used for encryption |
+| Block cipher | AES-128, AES-192 and AES-256 (FIPS-197), implemented from scratch: no crypto library is used for encryption |
 | Modes | ECB, CBC, CFB, OFB, CTR |
 | Initial vector | 16 zero bytes (`00…00`) for CBC, CFB and OFB |
 | Counter | 128-bit initial value entered by the user, incremented by 1 per block (mod 2¹²⁸) |
@@ -40,7 +40,8 @@ experiments such as the famous "ECB picture".
 - [x] **Step 6 – OFB mode**
 - [x] **Step 7 – CTR mode** (user-defined initial counter)
 - [x] **Step 8 – Learning app**: AES step-by-step visualizer, key expansion, mode diagrams, experiments ([docs](docs/web-app.md))
-- [ ] **Step 9 – Report material**: mode comparison ([done](docs/modes-comparison.md)), ECB-pattern and error-propagation demos (in the app), written report
+- [x] **Step 9 – AES-192 and AES-256**: all three key sizes in the core, all five modes and the learning app
+- [ ] **Step 10 – Report material**: mode comparison ([done](docs/modes-comparison.md)), ECB-pattern and error-propagation demos (in the app), written report
 
 ## Repository structure
 
@@ -49,7 +50,7 @@ aes-modes-of-operation/
 ├── aesmodes/              # the Python package
 │   ├── __init__.py
 │   ├── __main__.py        # command-line demo (python -m aesmodes)
-│   ├── aes_core.py        # AES-128 block cipher (one 16-byte block)
+│   ├── aes_core.py        # AES block cipher, 128/192/256-bit keys (one 16-byte block)
 │   ├── padding.py         # zeros + pad-count padding
 │   ├── modes.py           # ECB, CBC, CFB, OFB, CTR
 │   ├── explain.py         # step-by-step data for the learning app
@@ -61,6 +62,7 @@ aes-modes-of-operation/
 │   ├── test_padding.py
 │   ├── test_ecb.py        # ECB: NIST SP 800-38A F.1.1
 │   ├── test_modes.py      # CBC/CFB/OFB/CTR: NIST vectors, error propagation
+│   ├── test_key_sizes.py  # AES-192/256: FIPS-197 + NIST vectors for every mode
 │   └── test_web.py        # the learning app's server
 ├── docs/
 │   ├── aes-core.md        # how the AES core is built
@@ -119,8 +121,8 @@ python -m aesmodes.web
 
 | Section | What it teaches |
 |---|---|
-| **1 · Inside AES** | Step through all 41 states of one block: S-box lookup, animated ShiftRows, MixColumns matrix maths in GF(2⁸), bit-level AddRoundKey |
-| **2 · Key expansion** | How each of the 44 key words is built (RotWord, SubWord, Rcon) |
+| **1 · Inside AES** | Step through every state of one block (41, 49 or 57 for AES-128/192/256): S-box lookup, animated ShiftRows, MixColumns matrix maths in GF(2⁸), bit-level AddRoundKey |
+| **2 · Key expansion** | How each of the 44, 52 or 60 key words is built (RotWord, SubWord, Rcon, and AES-256's extra SubWord) |
 | **3 · Modes of operation** | Encrypt or decrypt any message; see the padding byte by byte and a block diagram with every real value |
 | **4 · Experiments** | The ECB picture, flipping one ciphertext bit, what a zero IV leaks, comparison table |
 
@@ -128,16 +130,19 @@ python -m aesmodes.web
 |---|---|
 | ![SubBytes](docs/images/aes-subbytes.png) | ![MixColumns](docs/images/aes-mixcolumns.png) |
 | ![CBC chain](docs/images/modes-cbc-chain.png) | ![ECB picture](docs/images/lab-ecb-picture.png) |
+| ![AES-256 key expansion](docs/images/keys-aes256-subword.png) | |
 
 Every value is computed by the Python code in `aesmodes/`. The browser only draws. See
 [docs/web-app.md](docs/web-app.md) for how it works.
 
 ## Usage (library)
 
-```python
-from aesmodes import AES128, format_state
+Every key field in the app has an **AES-128 / AES-192 / AES-256** selector.
 
-aes = AES128(bytes.fromhex("000102030405060708090a0b0c0d0e0f"))
+```python
+from aesmodes import AES, format_state
+
+aes = AES(bytes.fromhex("000102030405060708090a0b0c0d0e0f"))   # 16, 24 or 32 bytes
 
 trace = []                                     # optional: collect every intermediate state
 ct = aes.encrypt_block(bytes.fromhex("00112233445566778899aabbccddeeff"), trace)
@@ -153,7 +158,7 @@ for step in trace[:3]:
 ```python
 from aesmodes import encrypt, decrypt
 
-key = bytes.fromhex("2b7e151628aed2a6abf7158809cf4f3c")
+key = bytes.fromhex("2b7e151628aed2a6abf7158809cf4f3c")   # or a 24- / 32-byte key for AES-192 / AES-256
 
 res = encrypt("CBC", key, b"Hello, AES modes!")         # zero IV, zero+count padding
 print(res.hex())                                        # 32 bytes: 17 + 15 padding
@@ -175,13 +180,15 @@ output, the padded data, the IV or counter used, and one `BlockStep` per block.
 
 ## Verification
 
-The AES core is checked against the official **FIPS-197** test vectors (key expansion, Appendix B and
-Appendix C.1) and against `pycryptodome` on hundreds of random keys and blocks.
+The AES core is checked against the official **FIPS-197** test vectors for all three key sizes (key
+expansion A.1–A.3, Appendix B, and C.1–C.3) and against `pycryptodome` on hundreds of random keys
+and blocks.
 
 All five modes are checked against the **NIST SP 800-38A** test vectors (F.1.1, F.2.1, F.3.13, F.4.1,
 F.5.1), against `pycryptodome` with the zero IV, with round trips for many message lengths, and with
 error-propagation tests that confirm the behaviour described in
-[docs/modes-comparison.md](docs/modes-comparison.md). Run `python -m pytest -v` to see all 123 tests.
+[docs/modes-comparison.md](docs/modes-comparison.md). AES-192 and AES-256 are also checked against the NIST SP 800-38A vectors in every mode.
+Run `python -m pytest -v` to see all 204 tests.
 
 ## References
 

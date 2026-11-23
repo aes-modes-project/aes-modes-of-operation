@@ -1,5 +1,6 @@
 """
-aesmodes - AES-128 and its five modes of operation (ECB, CBC, CFB, OFB, CTR).
+aesmodes - AES (128/192/256-bit keys) and its five modes of operation
+(ECB, CBC, CFB, OFB, CTR).
 
 EECE 455/632 Cryptography and Network Security - Project 8.
 
@@ -12,7 +13,7 @@ Quick start:
     decrypt("CTR", key, res.output, counter="01").output # b"Hello"
 """
 
-from .aes_core import AES128, format_state, key_expansion, state_to_hex
+from .aes_core import AES, AES128, KEY_SIZES, format_state, key_expansion, state_to_hex
 from .modes import (
     MODE_NAMES,
     ZERO_IV,
@@ -35,7 +36,7 @@ from .modes import (
 from .padding import PaddingError, pad, unpad
 
 __all__ = [
-    "AES128", "key_expansion", "format_state", "state_to_hex",
+    "AES", "AES128", "KEY_SIZES", "key_expansion", "format_state", "state_to_hex",
     "pad", "unpad", "PaddingError",
     "MODE_NAMES", "ZERO_IV", "ModeResult", "BlockStep", "counter_to_int",
     "encrypt", "decrypt",
@@ -43,4 +44,4 @@ __all__ = [
     "cfb_encrypt", "cfb_decrypt", "ofb_encrypt", "ofb_decrypt",
     "ctr_encrypt", "ctr_decrypt",
 ]
-__version__ = "0.4.0"
+__version__ = "0.5.0"

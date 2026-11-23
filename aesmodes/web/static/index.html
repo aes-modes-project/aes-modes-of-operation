@@ -39,7 +39,7 @@
     <p class="kicker">An interactive companion to the Advanced Encryption Standard</p>
     <h1>See how AES turns 16 bytes of plaintext into ciphertext, and how the five modes of operation encrypt whole messages.</h1>
     <p class="lead">Every value on these pages is computed live by this project's own from-scratch
-      AES-128 implementation (<code>aesmodes/aes_core.py</code>) and modes
+      AES implementation for 128-, 192- and 256-bit keys (<code>aesmodes/aes_core.py</code>) and modes
       (<code>aesmodes/modes.py</code>). Nothing comes from an external crypto library.</p>
   </div>
 
@@ -47,7 +47,7 @@
     <a class="card-link" href="#aes"><span class="num big">1</span><h3>Inside AES</h3>
       <p>Watch one block go through the 10 rounds: SubBytes, ShiftRows, MixColumns and AddRoundKey, each one animated and explained.</p></a>
     <a class="card-link" href="#keys"><span class="num big">2</span><h3>Key expansion</h3>
-      <p>See how the 16-byte key grows into 44 words, one round key per round, with RotWord, SubWord and Rcon.</p></a>
+      <p>See how a 128-, 192- or 256-bit key grows into 44, 52 or 60 words, one round key per round, with RotWord, SubWord and Rcon.</p></a>
     <a class="card-link" href="#modes"><span class="num big">3</span><h3>Modes of operation</h3>
       <p>Encrypt a real message in ECB, CBC, CFB, OFB and CTR and follow every block through the chaining diagram.</p></a>
     <a class="card-link" href="#lab"><span class="num big">4</span><h3>Experiments</h3>
@@ -58,10 +58,19 @@
     <article class="paper">
       <h2><span class="secnum">§1</span>What AES does</h2>
       <p>AES is a <em>block cipher</em>: it takes exactly <strong>16 bytes</strong> (128 bits) of
-        plaintext and a 16-byte key, and produces 16 bytes of ciphertext. The bytes are arranged in a
+        plaintext and a key, and produces 16 bytes of ciphertext. The bytes are arranged in a
         4&thinsp;×&thinsp;4 grid called the <em>state</em>, and the same four operations are applied
         round after round:</p>
       <div id="home-rounds" class="round-diagram"></div>
+      <p>The block is always 128 bits. The key can have three lengths, and a longer key means more rounds:</p>
+      <table class="booktabs sizes-table">
+        <thead><tr><th>variant</th><th class="c">key</th><th class="c">rounds <i>N</i><sub>r</sub></th><th class="c">key words</th></tr></thead>
+        <tbody>
+          <tr><td>AES-128</td><td class="c">16 bytes</td><td class="c">10</td><td class="c">44</td></tr>
+          <tr><td>AES-192</td><td class="c">24 bytes</td><td class="c">12</td><td class="c">52</td></tr>
+          <tr><td>AES-256</td><td class="c">32 bytes</td><td class="c">14</td><td class="c">60</td></tr>
+        </tbody>
+      </table>
       <p>Each operation has a job. <span class="op-tag op-sub">SubBytes</span> adds
         <em>confusion</em>, meaning a non-linear relation between key and ciphertext.
         <span class="op-tag op-shift">ShiftRows</span> and <span class="op-tag op-mix">MixColumns</span>
@@ -90,13 +99,14 @@
 <!-- =============================================================== AES -->
 <section class="page" id="page-aes">
   <div class="page-head">
-    <h1><span class="secnum">1</span>Inside AES-128</h1>
-    <p class="lead">Encrypt one 16-byte block and step through all 41 intermediate states. Use the
-      buttons, the timeline or your keyboard's <kbd>←</kbd> <kbd>→</kbd> keys.</p>
+    <h1><span class="secnum">1</span>Inside AES</h1>
+    <p class="lead">Encrypt one 16-byte block with a 128-, 192- or 256-bit key and step through every
+      intermediate state (<span id="aes-nsteps">41</span> for this key). Use the buttons, the timeline
+      or your keyboard's <kbd>←</kbd> <kbd>→</kbd> keys.</p>
   </div>
 
   <div class="controls paper">
-    <label class="field grow"><span>Key <i>K</i> (32 hex digits)</span>
+    <label class="field grow"><span>Key <i>K</i> (32, 48 or 64 hex digits)</span>
       <input id="aes-key" class="mono" spellcheck="false"></label>
     <label class="field grow">Plaintext block
       <div class="input-with-toggle">
@@ -105,7 +115,7 @@
       </div></label>
     <div class="field-buttons">
       <button class="btn primary" id="aes-run">Encrypt</button>
-      <button class="btn" id="aes-example" title="The worked example from FIPS-197, Appendix B">FIPS-197 example</button>
+      <button class="btn" id="aes-example" title="The worked example from FIPS-197 for the selected key size">FIPS-197 example</button>
     </div>
   </div>
   <p class="note" id="aes-note" hidden></p>
@@ -138,20 +148,19 @@
 <section class="page" id="page-keys">
   <div class="page-head">
     <h1><span class="secnum">2</span>Key expansion</h1>
-    <p class="lead">AES-128 needs 11 round keys (one before the rounds plus one per round). The key
-      schedule stretches the 16-byte key into 44 four-byte words
-      <i>w</i><sub>0</sub>…<i>w</i><sub>43</sub>; round key <i>r</i> is
+    <p class="lead" id="keys-lead">AES needs one round key per round plus one before the first round.
+      The key schedule stretches the key into four-byte words; round key <i>r</i> is
       <i>w</i><sub>4r</sub>…<i>w</i><sub>4r+3</sub>.</p>
   </div>
   <div class="controls paper">
-    <label class="field grow"><span>Key <i>K</i> (32 hex digits)</span>
+    <label class="field grow"><span>Key <i>K</i> (32, 48 or 64 hex digits)</span>
       <input id="keys-key" class="mono" spellcheck="false"></label>
     <div class="field-buttons"><button class="btn primary" id="keys-run">Expand key</button></div>
   </div>
   <p class="error" id="keys-error" hidden></p>
   <div class="two-col keys-layout">
     <div class="paper">
-      <h2><span class="secnum">2.1</span>All 44 words</h2>
+      <h2><span class="secnum">2.1</span>All <span id="keys-count">44</span> words</h2>
       <p class="muted">Click any word to see how it was computed.</p>
       <div id="keys-grid" class="keys-grid"></div>
     </div>
@@ -171,7 +180,7 @@
 
   <div class="controls paper">
     <div class="seg big" id="mode-op"><button data-v="encrypt" class="on">Encrypt</button><button data-v="decrypt">Decrypt</button></div>
-    <label class="field grow"><span>Key <i>K</i> (32 hex digits)</span>
+    <label class="field grow"><span>Key <i>K</i> (32, 48 or 64 hex digits)</span>
       <input id="mode-key" class="mono" spellcheck="false"></label>
     <label class="field grow2"><span id="mode-data-label">Message</span>
       <div class="input-with-toggle">
@@ -261,7 +270,7 @@
 </main>
 
 <footer class="foot">
-  AES-128 (FIPS-197) and modes of operation (NIST SP 800-38A), implemented from scratch for
+  AES-128/192/256 (FIPS-197) and modes of operation (NIST SP 800-38A), implemented from scratch for
   EECE 455/632. Educational use only. <span id="version"></span>
 </footer>
 </body>

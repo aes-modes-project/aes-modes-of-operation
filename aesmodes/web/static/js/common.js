@@ -127,12 +127,62 @@ function opArrow(label) {
 /* parse a counter / hex convenience */
 function cleanHex(s) { return (s || "").replace(/\s+/g, "").replace(/^0x/i, "").toLowerCase(); }
 
-/* key inputs on every page stay in sync */
-function bindKeyInput(input) {
+/* ------------------------------------------------------------ key sizes */
+/* AES-128 / 192 / 256: key length -> Nk words, Nr rounds (FIPS-197 table) */
+const KEY_SIZES = {
+  128: { nk: 4, nr: 10, words: 44 },
+  192: { nk: 6, nr: 12, words: 52 },
+  256: { nk: 8, nr: 14, words: 60 },
+};
+/* example keys from NIST SP 800-38A / FIPS-197 Appendix A, one per size */
+const EXAMPLE_KEYS = {
+  128: "2b7e151628aed2a6abf7158809cf4f3c",
+  192: "8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b",
+  256: "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4",
+};
+function keyBits(hex) {
+  const h = cleanHex(hex);
+  if (!/^[0-9a-f]*$/.test(h)) return null;
+  const bits = h.length * 4;
+  return KEY_SIZES[bits] ? bits : null;
+}
+
+/* every key input gets a 128 | 192 | 256 selector and a short description;
+   all key inputs on every page stay in sync. onChange runs when the key changes. */
+function bindKeyInput(input, onChange) {
   input.value = App.state.key;
-  input.addEventListener("change", () => App.setKey(input.value));
-  App.keyInputs = (App.keyInputs || []).concat(input);
+  const seg = el("div", { class: "seg small" },
+    [128, 192, 256].map((b) => el("button", { "data-v": b, type: "button", title: `Use an example ${b}-bit key` }, `AES-${b}`)));
+  const info = el("span", { class: "key-info" });
+  const meta = el("div", { class: "key-meta" }, seg, info);
+  input.after(meta);
+  const entry = { input, seg, info, onChange };
+  seg.addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    e.preventDefault();
+    if (keyBits(App.state.key) === +b.dataset.v) return;
+    App.setKey(EXAMPLE_KEYS[b.dataset.v]);
+    syncKeyInputs();
+    onChange && onChange();
+  });
+  input.addEventListener("input", () => updateKeyMeta(entry, input.value));
+  input.addEventListener("change", () => { App.setKey(input.value); syncKeyInputs(); });
+  App.keyInputs = (App.keyInputs || []).concat(entry);
+  updateKeyMeta(entry, input.value);
+}
+function updateKeyMeta(entry, value) {
+  const bits = keyBits(value);
+  $$("button", entry.seg).forEach((x) => x.classList.toggle("on", +x.dataset.v === bits));
+  const n = cleanHex(value).length;
+  entry.info.classList.toggle("bad", !bits);
+  entry.info.innerHTML = bits
+    ? `${KEY_SIZES[bits].nk * 4}-byte key · <b>${KEY_SIZES[bits].nr} rounds</b> · ${KEY_SIZES[bits].words} key words`
+    : `${n} hex digits: a key needs 32, 48 or 64`;
 }
 function syncKeyInputs() {
-  (App.keyInputs || []).forEach((i) => { if (document.activeElement !== i) i.value = App.state.key; });
+  (App.keyInputs || []).forEach((e) => {
+    if (document.activeElement !== e.input) e.input.value = App.state.key;
+    updateKeyMeta(e, e.input.value);
+  });
 }

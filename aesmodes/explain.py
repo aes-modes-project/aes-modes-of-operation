@@ -46,8 +46,9 @@ def parse_bytes(value: str, fmt: str, what: str = "Input") -> bytes:
 
 def parse_key(value: str) -> bytes:
     key = parse_bytes(value, "hex", "Key")
-    if len(key) != 16:
-        raise ValueError(f"Key must be exactly 32 hex digits (16 bytes); got {len(key) * 2}.")
+    if len(key) not in core.KEY_SIZES:
+        raise ValueError("Key must be 32, 48 or 64 hex digits (AES-128, AES-192 or AES-256); "
+                         f"got {len(key) * 2}.")
     return key
 
 
@@ -70,24 +71,33 @@ def word_hex(w: List[int]) -> str:
 # Key expansion
 # --------------------------------------------------------------------------
 def key_expansion_details(key: bytes) -> List[Dict]:
-    """The 44 words with how each one was computed."""
+    """Every word of the key schedule (44, 52 or 60) with how it was computed.
+
+    kind: "key"  - one of the Nk words copied from the key
+          "g"    - i % Nk == 0: w[i-Nk] XOR SubWord(RotWord(w[i-1])) XOR Rcon
+          "h"    - AES-256 only, i % 8 == 4: w[i-8] XOR SubWord(w[i-1])
+          "xor"  - otherwise: w[i-Nk] XOR w[i-1]
+    """
+    nk, _ = core.key_params(key)
     w = core.key_expansion(key)
     out = []
     for i, word in enumerate(w):
-        item = {"i": i, "word": word_hex(word), "round": i // 4}
-        if i < 4:
+        item = {"i": i, "word": word_hex(word), "round": i // 4, "nk": nk}
+        if i < nk:
             item["kind"] = "key"
         else:
-            prev, back = w[i - 1], w[i - 4]
+            prev, back = w[i - 1], w[i - nk]
             item["prev"] = word_hex(prev)
             item["back"] = word_hex(back)
-            if i % 4 == 0:
+            if i % nk == 0:
                 rot = core.rot_word(prev)
                 sub = core.sub_word(rot)
-                rcon = [core.RCON[i // 4 - 1], 0, 0, 0]
+                rcon = [core.RCON[i // nk - 1], 0, 0, 0]
                 temp = [a ^ b for a, b in zip(sub, rcon)]
-                item.update(kind="g", rot=word_hex(rot), sub=word_hex(sub),
+                item.update(kind="g", rcon_index=i // nk, rot=word_hex(rot), sub=word_hex(sub),
                             rcon=word_hex(rcon), temp=word_hex(temp))
+            elif nk > 6 and i % nk == 4:
+                item.update(kind="h", sub=word_hex(core.sub_word(prev)))
             else:
                 item["kind"] = "xor"
         out.append(item)
@@ -119,7 +129,7 @@ def aes_walkthrough(key: bytes, block: bytes) -> Dict:
     """Encrypt one block and record every step with its before/after states."""
     if len(block) != 16:
         raise ValueError("AES works on exactly 16 bytes.")
-    aes = core.AES128(key)
+    aes = core.AES(key)
     rks = aes.round_keys
     steps: List[Dict] = []
 
@@ -131,14 +141,14 @@ def aes_walkthrough(key: bytes, block: bytes) -> Dict:
     t = core.add_round_key(s, rks[0])
     add(0, "AddRoundKey", s, t, roundKey=mat(rks[0]))
     s = t
-    for rnd in range(1, core.NR + 1):
+    for rnd in range(1, aes.nr + 1):
         t = core.sub_bytes(s)
         add(rnd, "SubBytes", s, t)
         s = t
         t = core.shift_rows(s)
         add(rnd, "ShiftRows", s, t)
         s = t
-        if rnd != core.NR:
+        if rnd != aes.nr:
             t = core.mix_columns(s)
             add(rnd, "MixColumns", s, t, mix=_mix_detail(s, t))
             s = t
@@ -150,6 +160,9 @@ def aes_walkthrough(key: bytes, block: bytes) -> Dict:
     assert ciphertext == aes.encrypt_block(block)          # same result as the core cipher
     return {
         "key": hx(key),
+        "keyBits": aes.key_bits,
+        "nk": aes.nk,
+        "rounds": aes.nr,
         "plaintext": hx(block),
         "ciphertext": ciphertext.hex(),
         "roundKeys": [mat(k) for k in rks],
@@ -205,12 +218,15 @@ def run_mode(mode: str, operation: str, key: bytes, data: bytes, counter=None) -
     mode = mode.upper()
     if operation == "encrypt":
         res = encrypt(mode, key, data, counter=counter)
-        return mode_result_to_dict(res, message_len=len(data))
+        d = mode_result_to_dict(res, message_len=len(data))
+        d["keyBits"] = 8 * len(key)
+        return d
     if operation == "decrypt":
         res = decrypt(mode, key, data, counter=counter)
         d = mode_result_to_dict(res)
         d["messageLength"] = len(res.output)
         d["padCount"] = len(res.padded) - len(res.output)
+        d["keyBits"] = 8 * len(key)
         return d
     raise ValueError("Operation must be 'encrypt' or 'decrypt'.")
 

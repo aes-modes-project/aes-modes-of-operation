@@ -119,6 +119,14 @@ main { max-width: 1240px; margin: 0 auto; padding: 26px 28px 40px; }
 .seg button { font-family: var(--serif); font-size: 14px; padding: 6px 11px; border: 0; background: var(--sheet); cursor: pointer; color: var(--muted); }
 .seg button.on { background: var(--ink); color: #fff; }
 .seg.big button { font-size: 16px; padding: 9px 16px; }
+.seg.small button { font-size: 12.5px; padding: 3px 9px; font-family: var(--mono); }
+.key-meta { display: flex; align-items: center; gap: 10px; margin-top: 4px; flex-wrap: wrap; }
+.key-info { font-size: 13.5px; color: var(--muted); }
+.key-info b { font-weight: 400; color: var(--ink); }
+.key-info.bad { color: #a32d2d; }
+.size-badge { font-family: var(--mono); font-size: 13px; padding: 2px 8px; border-radius: 4px; background: var(--key-bg); color: var(--key); }
+.kw.h { background: var(--sub-bg); }
+.sizes-table { margin: 10px 0 4px; }
 .error { color: #a32d2d; background: #fcebeb; border: 1px solid #f09595; border-radius: 6px; padding: 8px 12px; }
 .note { color: #633806; background: #faeeda; border: 1px solid #ef9f27; border-radius: 6px; padding: 8px 12px; }
 input[type=range] { accent-color: var(--ink); }
