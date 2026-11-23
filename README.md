@@ -2,9 +2,9 @@
 
 **EECE 455/632 – Cryptography and Network Security · Project 8**
 
-[![Tests and web version](https://github.com/nourkhatib22/aes-modes-of-operation/actions/workflows/pages.yml/badge.svg)](https://github.com/nourkhatib22/aes-modes-of-operation/actions/workflows/pages.yml)
+[![Tests and web version](https://github.com/aes-modes-project/aes-modes-of-operation/actions/workflows/pages.yml/badge.svg)](https://github.com/aes-modes-project/aes-modes-of-operation/actions/workflows/pages.yml)
 
-### ▶ Open the learning app: **[nourkhatib22.github.io/aes-modes-of-operation](https://nourkhatib22.github.io/aes-modes-of-operation/)**
+### ▶ Open the learning app: **[aes-modes-project.github.io/aes-modes-of-operation](https://aes-modes-project.github.io/aes-modes-of-operation/)**
 
 No installation needed: the app runs the project's own Python code directly in your browser.
 
@@ -129,7 +129,7 @@ use the **Testing** sidebar to run the tests.
 
 There are two ways to open it, and both run the same code:
 
-- **Online:** **https://nourkhatib22.github.io/aes-modes-of-operation/**. GitHub publishes it automatically after every push to `main`, once the
+- **Online:** **https://aes-modes-project.github.io/aes-modes-of-operation/**. GitHub publishes it automatically after every push to `main`, once the
   tests pass. The browser loads Python (Pyodide) and runs the project's own `aesmodes/*.py` files,
   so no server is needed. The first visit takes a few seconds to load.
 - **On your computer:** `python -m aesmodes.web` starts a local Python server at

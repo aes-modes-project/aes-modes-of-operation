@@ -4,7 +4,7 @@ All notable changes to this project are documented here, one entry per developme
 
 ## [0.6.0] – Step 10: the learning app online
 ### Added
-- The learning app is published on GitHub Pages (https://nourkhatib22.github.io/aes-modes-of-operation/). It runs the project's own Python code in
+- The learning app is published on GitHub Pages (https://aes-modes-project.github.io/aes-modes-of-operation/). It runs the project's own Python code in
   the browser with Pyodide, so it needs no installation and no server.
 - `aesmodes/api.py`: the request handlers, now shared by the Flask server and the browser version.
 - `tools/build_site.py`: builds the web version; `.github/workflows/pages.yml` runs the tests and

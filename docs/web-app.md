@@ -1,6 +1,6 @@
 # The learning app
 
-Folder: [`aesmodes/web/`](../aesmodes/web/) · Online at **https://nourkhatib22.github.io/aes-modes-of-operation/** · Locally: `python -m aesmodes.web`
+Folder: [`aesmodes/web/`](../aesmodes/web/) · Online at **https://aes-modes-project.github.io/aes-modes-of-operation/** · Locally: `python -m aesmodes.web`
 
 The app is a local web page that **teaches** AES and its modes visually. It runs on your own computer:
 a small Python server (Flask) calls the project's AES and modes code, and your browser draws the
@@ -20,7 +20,7 @@ results. No cryptography is done in JavaScript. Every number on screen comes fro
 
 | | Online (GitHub Pages) | Local |
 |---|---|---|
-| How to open | https://nourkhatib22.github.io/aes-modes-of-operation/ | `python -m aesmodes.web` → http://127.0.0.1:8455 |
+| How to open | https://aes-modes-project.github.io/aes-modes-of-operation/ | `python -m aesmodes.web` → http://127.0.0.1:8455 |
 | Where the Python runs | in your browser, with [Pyodide](https://pyodide.org) (Python compiled to WebAssembly) | in the Flask server on your computer |
 | Needs installing | nothing | Python + `pip install -r requirements.txt` |
 | Works offline | no | yes |
