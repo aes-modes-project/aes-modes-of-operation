@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AES Encryptor · encrypt files and messages in your browser</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%230f5b52%22/%3E%3Cpath d=%22M11 14v-3a5 5 0 0 1 10 0v3%22 stroke=%22white%22 stroke-width=%222.4%22 fill=%22none%22/%3E%3Crect x=%229%22 y=%2214%22 width=%2214%22 height=%2210%22 rx=%222%22 fill=%22white%22/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <script defer src="app.js"></script>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap top-inner">
+    <div class="logo">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8"/><path d="M11 14v-3a5 5 0 0 1 10 0v3"/><rect x="9" y="14" width="14" height="10" rx="2" class="body"/></svg>
+      <div><b>AES Encryptor</b><span>EECE 455/632 · Project 8</span></div>
+    </div>
+    <a class="toplink" href="../">How AES works: open the learning app ↗</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="intro">
+    <h1>Encrypt files and messages with AES, right in your browser.</h1>
+    <p>Pick one of the five modes of operation and a 128-, 192- or 256-bit key. The encryption is done
+      by our own AES implementation, written from scratch in Python and running locally in this page.
+      <strong>Nothing you encrypt is uploaded anywhere.</strong></p>
+  </section>
+
+  <div class="loading" id="loading">
+    <div class="spin"></div><span id="loading-text">Starting the encryption engine…</span>
+  </div>
+
+  <section class="card">
+    <div class="tabs" role="tablist">
+      <button class="tab on" data-tab="enc" role="tab">🔒 Encrypt</button>
+      <button class="tab" data-tab="dec" role="tab">🔓 Decrypt</button>
+    </div>
+
+    <!-- ============================================================ ENCRYPT -->
+    <div class="panel" id="panel-enc">
+      <div class="step"><span class="n">1</span><h2>What do you want to encrypt?</h2></div>
+      <div class="switch" id="enc-kind"><button data-v="text" class="on">A message</button><button data-v="file">A file</button></div>
+      <textarea id="enc-text" placeholder="Type or paste your message here…" rows="5"></textarea>
+      <label class="drop" id="enc-drop" hidden>
+        <input type="file" id="enc-file" hidden>
+        <div class="drop-icon">📄</div>
+        <div class="drop-main" id="enc-file-label">Drop a file here or <u>choose one</u></div>
+        <div class="drop-sub">Any type, up to 25 MB</div>
+      </label>
+
+      <div class="step"><span class="n">2</span><h2>Mode of operation</h2></div>
+      <div class="modes" id="enc-mode"></div>
+      <p class="mode-note" id="mode-note"></p>
+
+      <div class="step"><span class="n">3</span><h2>Key</h2></div>
+      <div class="row">
+        <div class="field">
+          <span class="lbl">Key size</span>
+          <div class="switch" id="enc-bits"><button data-v="128">AES-128</button><button data-v="192">AES-192</button><button data-v="256" class="on">AES-256</button></div>
+        </div>
+        <div class="field">
+          <span class="lbl">Key from</span>
+          <div class="switch" id="enc-keytype"><button data-v="password" class="on">A password</button><button data-v="hex">A hex key</button></div>
+        </div>
+      </div>
+      <div class="field" id="enc-pw-field">
+        <span class="lbl">Password</span>
+        <div class="pw"><input type="password" id="enc-pw" autocomplete="new-password" placeholder="Choose a password you'll remember"><button class="eye" data-for="enc-pw" type="button" aria-label="Show password">👁</button></div>
+        <span class="hint" id="pw-strength">The password is turned into a key with PBKDF2-HMAC-SHA256 (200,000 rounds, random salt).</span>
+      </div>
+      <div class="field" id="enc-hex-field" hidden>
+        <span class="lbl">Hex key</span>
+        <div class="pw"><input id="enc-hex" class="mono" spellcheck="false" placeholder="64 hex digits for AES-256"><button class="small-btn" id="gen-key" type="button">Generate</button></div>
+        <span class="hint" id="hex-hint">Keep this key: you need exactly the same one to decrypt.</span>
+      </div>
+
+      <div class="step"><span class="n">4</span><h2 id="iv-title">Initial vector</h2></div>
+      <div id="iv-block">
+        <div class="switch" id="enc-ivkind"><button data-v="zero" class="on">Zero IV (project spec)</button><button data-v="random">Random IV (safer)</button></div>
+        <p class="hint" id="iv-hint"></p>
+      </div>
+      <div id="ctr-block" hidden>
+        <div class="row">
+          <div class="field grow"><span class="lbl">Initial counter (hex)</span><input id="enc-ctr" class="mono" value="00000000000000000000000000000001" spellcheck="false"></div>
+          <label class="check"><input type="checkbox" id="enc-ctr-rand"> Random counter (safer)</label>
+        </div>
+        <p class="hint">The counter is stored in the encrypted file, so the receiver doesn't have to type it.</p>
+      </div>
+      <p class="hint" id="ecb-block" hidden>ECB uses no IV: every block is encrypted on its own.</p>
+
+      <button class="go" id="enc-go">Encrypt</button>
+      <div class="progress" id="enc-progress" hidden><div class="bar"><i></i></div><span></span></div>
+      <p class="err" id="enc-err" hidden></p>
+      <div class="result" id="enc-result" hidden></div>
+    </div>
+
+    <!-- ============================================================ DECRYPT -->
+    <div class="panel" id="panel-dec" hidden>
+      <div class="step"><span class="n">1</span><h2>What do you want to decrypt?</h2></div>
+      <div class="switch" id="dec-kind"><button data-v="text" class="on">An encrypted message</button><button data-v="file">An .aesm file</button></div>
+      <textarea id="dec-text" class="mono" placeholder="Paste the encrypted message (it starts with AESM1:)" rows="4"></textarea>
+      <label class="drop" id="dec-drop" hidden>
+        <input type="file" id="dec-file" accept=".aesm" hidden>
+        <div class="drop-icon">🔐</div>
+        <div class="drop-main" id="dec-file-label">Drop an .aesm file here or <u>choose one</u></div>
+        <div class="drop-sub">Files made with this tool</div>
+      </label>
+      <div class="detected" id="dec-info" hidden></div>
+
+      <div class="step"><span class="n">2</span><h2>Key</h2></div>
+      <div class="field" id="dec-pw-field">
+        <span class="lbl">Password</span>
+        <div class="pw"><input type="password" id="dec-pw" autocomplete="current-password" placeholder="The password used to encrypt"><button class="eye" data-for="dec-pw" type="button" aria-label="Show password">👁</button></div>
+      </div>
+      <div class="field" id="dec-hex-field" hidden>
+        <span class="lbl">Hex key</span>
+        <input id="dec-hex" class="mono" spellcheck="false" placeholder="The hex key used to encrypt">
+      </div>
+      <p class="hint">The mode, key size and IV or counter are read from the encrypted data automatically.</p>
+
+      <button class="go" id="dec-go">Decrypt</button>
+      <div class="progress" id="dec-progress" hidden><div class="bar"><i></i></div><span></span></div>
+      <p class="err" id="dec-err" hidden></p>
+      <div class="result" id="dec-result" hidden></div>
+    </div>
+  </section>
+
+  <section class="how">
+    <h2>How it works</h2>
+    <div class="how-grid">
+      <div><b>Our own AES</b><p>AES-128/192/256 and the five modes come from the project's Python code
+        (<code>aes_core.py</code>, <code>modes.py</code>, and a table-based fast path in <code>fastaes.py</code>),
+        checked against the official FIPS-197 and NIST SP 800-38A test values.</p></div>
+      <div><b>Runs in your browser</b><p>The Python code runs inside this page with Pyodide (Python compiled
+        to WebAssembly), in a background worker. Your files and passwords never leave your computer.</p></div>
+      <div><b>Password → key</b><p>Passwords are stretched into an AES key with PBKDF2-HMAC-SHA256 and a
+        random salt, so the same password gives a different key each time.</p></div>
+      <div><b>Tamper check</b><p>An HMAC-SHA256 tag covers the whole file, so a wrong password or any
+        changed byte is detected before decryption.</p></div>
+      <div><b>Self-describing files</b><p>The <code>.aesm</code> format stores the mode, key size, IV or
+        counter, salt and original file name. To decrypt you only need the password or key.</p></div>
+      <div><b>Padding</b><p>As in the project specification: zero bytes plus one byte holding the pad
+        count. CBC/CFB/OFB default to a zero IV, as the specification asks.</p></div>
+    </div>
+    <p class="fine">Built for a university course. It's educational software: for protecting truly sensitive
+      data, use an established tool such as age, GnuPG or your operating system's disk encryption.</p>
+  </section>
+</main>
+
+<footer class="foot wrap">AES Encryptor · EECE 455/632 Project 8 · <a href="../">Learning app</a> ·
+  <a href="https://github.com/aes-modes-project/aes-modes-of-operation">Source code</a></footer>
+</body>
+</html>

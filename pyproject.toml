@@ -1,6 +1,6 @@
 [project]
 name = "aesmodes"
-version = "0.6.0"
+version = "0.7.0"
 description = "Educational AES (128/192/256-bit) implementation with ECB, CBC, CFB, OFB and CTR modes (EECE 455/632 Project 8)"
 readme = "README.md"
 requires-python = ">=3.10"

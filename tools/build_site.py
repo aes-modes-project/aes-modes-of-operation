@@ -6,7 +6,8 @@ build_site.py - build the web version of the learning app (for GitHub Pages).
 The result is a folder of plain files that any static web host can serve:
 
     _site/
-    ├── index.html                 the app (same page as the local version)
+    ├── index.html                 the learning app (same page as the local version)
+    ├── encryptor/                 the AES Encryptor website (files and messages)
     ├── static/                    css, js, KaTeX
     │   └── vendor/pyodide/        Python compiled to WebAssembly (Pyodide)
     └── py/aesmodes/*.py           the project's own Python code, run by the browser
@@ -25,7 +26,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 STATIC = ROOT / "aesmodes" / "web" / "static"
-PY_FILES = ["__init__.py", "aes_core.py", "padding.py", "modes.py", "explain.py", "api.py"]
+PY_FILES = ["__init__.py", "aes_core.py", "padding.py", "modes.py", "explain.py", "api.py",
+            "fastaes.py", "filecrypt.py"]
+ENCRYPTOR = ROOT / "aesmodes" / "web" / "encryptor"
 PYODIDE_FILES = ["pyodide.js", "pyodide.asm.js", "pyodide.asm.wasm", "python_stdlib.zip",
                  "pyodide-lock.json"]
 
@@ -36,6 +39,7 @@ def build(out: Path, pyodide: Path) -> None:
     shutil.copytree(STATIC, out / "static")
     shutil.copy(STATIC / "index.html", out / "index.html")
     (out / "static" / "index.html").unlink()
+    shutil.copytree(ENCRYPTOR, out / "encryptor")     # the AES Encryptor website (/encryptor/)
 
     py_out = out / "py" / "aesmodes"
     py_out.mkdir(parents=True)

@@ -51,7 +51,8 @@ def test_every_route_answers():
         assert handle(method, path, bodies.get(path, {}))[0] == 200, path
 
 
-WEB_FILES = ["__init__.py", "aes_core.py", "padding.py", "modes.py", "explain.py", "api.py"]
+WEB_FILES = ["__init__.py", "aes_core.py", "padding.py", "modes.py", "explain.py", "api.py",
+             "fastaes.py", "filecrypt.py"]
 
 
 def test_browser_files_use_only_the_standard_library():
@@ -83,6 +84,8 @@ def test_build_site(tmp_path):
     assert (out / "static" / "vendor" / "pyodide" / "pyodide.asm.wasm").exists()
     for f in WEB_FILES:
         assert (out / "py" / "aesmodes" / f).exists()
+    for f in ["index.html", "app.js", "worker.js", "style.css"]:      # the AES Encryptor site
+        assert (out / "encryptor" / f).exists()
     html = (out / "index.html").read_text()
     assert 'src="/static' not in html and 'href="/static' not in html   # relative paths only
 

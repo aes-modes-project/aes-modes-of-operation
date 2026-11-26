@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented here, one entry per development step.
 
+## [0.7.0] – Step 11: the AES Encryptor
+### Added
+- A separate website, the **AES Encryptor** (https://aes-modes-project.github.io/aes-modes-of-operation/encryptor/):
+  encrypt and decrypt real files and messages with any of the five modes and any key size, in the browser.
+- `aesmodes/fastaes.py`: a table-based (T-table) AES, built from our own S-box and GF(2⁸) maths and
+  checked against the teaching `AES` class. About 7× faster, so files of several MB are practical.
+- `aesmodes/filecrypt.py`: streaming modes, password-based keys (PBKDF2-HMAC-SHA256, random salt),
+  an HMAC-SHA256 integrity tag, the self-describing `.aesm` format, and a command-line tool.
+- `aesmodes/web/encryptor/`: the website (page, design, and a Web Worker running Python with Pyodide).
+- `tests/test_filecrypt.py` and site build checks (281 tests in total). The website was also
+  tested end to end in a headless browser (every mode and key size, files, wrong passwords).
+### Changed
+- The learning app's menu links to the Encryptor.
+
 ## [0.6.0] – Step 10: the learning app online
 ### Added
 - The learning app is published on GitHub Pages (https://aes-modes-project.github.io/aes-modes-of-operation/). It runs the project's own Python code in

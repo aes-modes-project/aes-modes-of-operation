@@ -6,7 +6,9 @@
 
 ### ▶ Open the learning app: **[aes-modes-project.github.io/aes-modes-of-operation](https://aes-modes-project.github.io/aes-modes-of-operation/)**
 
-No installation needed: the app runs the project's own Python code directly in your browser.
+### 🔒 Use it: the AES Encryptor: **[aes-modes-project.github.io/aes-modes-of-operation/encryptor](https://aes-modes-project.github.io/aes-modes-of-operation/encryptor/)**
+
+No installation needed: both sites run the project's own Python code directly in your browser.
 
 An educational implementation of **AES** (with **128-, 192- and 256-bit keys**) written from scratch in Python, together with its five
 classic **modes of operation**: ECB, CBC, CFB, OFB and Counter (CTR). It comes with an interactive
@@ -48,7 +50,8 @@ experiments such as the famous "ECB picture".
 - [x] **Step 8 – Learning app**: AES step-by-step visualizer, key expansion, mode diagrams, experiments ([docs](docs/web-app.md))
 - [x] **Step 9 – AES-192 and AES-256**: all three key sizes in the core, all five modes and the learning app
 - [x] **Step 10 – Web version**: the learning app online on GitHub Pages, with tests run on every push
-- [ ] **Step 11 – Report material**: mode comparison ([done](docs/modes-comparison.md)), ECB-pattern and error-propagation demos (in the app), written report
+- [x] **Step 11 – AES Encryptor**: a separate website that encrypts real files and messages with any mode and key size ([docs](docs/encryptor.md))
+- [ ] **Step 12 – Report material**: mode comparison ([done](docs/modes-comparison.md)), ECB-pattern and error-propagation demos (in the app), written report
 
 ## Repository structure
 
@@ -62,16 +65,21 @@ aes-modes-of-operation/
 │   ├── modes.py           # ECB, CBC, CFB, OFB, CTR
 │   ├── explain.py         # step-by-step data for the learning app
 │   ├── api.py             # request handlers, shared by the local server and the web version
-│   └── web/               # the learning app (python -m aesmodes.web)
-│       ├── server.py      # Flask server: calls the code above, returns JSON
-│       └── static/        # index.html, css/, js/, vendor/katex/
+│   ├── fastaes.py         # table-based AES (same results, ~7x faster) for real files
+│   ├── filecrypt.py       # file/message encryptor: streaming modes, passwords, HMAC, .aesm format
+│   └── web/
+│       ├── server.py      # the learning app's Flask server (python -m aesmodes.web)
+│       ├── static/        # the learning app: index.html, css/, js/, vendor/katex/
+│       └── encryptor/     # the AES Encryptor website: index.html, app.js, worker.js, style.css
 ├── tests/
 │   ├── test_aes_core.py   # FIPS-197 test vectors + random cross-checks
 │   ├── test_padding.py
 │   ├── test_ecb.py        # ECB: NIST SP 800-38A F.1.1
 │   ├── test_modes.py      # CBC/CFB/OFB/CTR: NIST vectors, error propagation
 │   ├── test_key_sizes.py  # AES-192/256: FIPS-197 + NIST vectors for every mode
-│   └── test_web.py        # the learning app's server
+│   ├── test_web.py        # the learning app's server
+│   ├── test_api_and_site.py  # shared handlers + building the web version
+│   └── test_filecrypt.py  # FastAES, streaming modes, .aesm containers, command line
 ├── docs/
 │   ├── aes-core.md        # how the AES core is built
 │   ├── padding.md         # the padding scheme
@@ -82,6 +90,7 @@ aes-modes-of-operation/
 │   ├── ctr.md
 │   ├── modes-comparison.md   # all five modes side by side
 │   ├── web-app.md         # how the learning app works
+│   ├── encryptor.md       # how the AES Encryptor works + the .aesm format
 │   └── images/            # screenshots
 ├── tools/
 │   └── build_site.py      # builds the web version (GitHub Pages)
@@ -150,6 +159,27 @@ There are two ways to open it, and both run the same code:
 
 Every value is computed by the Python code in `aesmodes/`. The browser only draws. See
 [docs/web-app.md](docs/web-app.md) for how it works.
+
+## The AES Encryptor
+
+A second website, built as an **application** of the five modes:
+**https://aes-modes-project.github.io/aes-modes-of-operation/encryptor/**
+
+- Encrypt a **message** (you get a text token to paste anywhere) or a **file** up to 25 MB (you get `name.aesm`).
+- Choose **ECB, CBC, CFB, OFB or CTR**, and **AES-128, 192 or 256**.
+- Use a **password** (stretched with PBKDF2-HMAC-SHA256) or a **hex key** (with a Generate button).
+- IV: all zeros as in the specification, or random. CTR: your own initial counter, or a random one.
+- Decrypting needs only the password or key: the mode, key size and IV/counter are stored in the file.
+- An HMAC-SHA256 tag detects a wrong password or any changed byte.
+
+Everything happens in your browser: nothing is uploaded. The same format works on the command line:
+
+```bash
+python -m aesmodes.filecrypt encrypt report.pdf --mode CTR --bits 256      # asks for a password
+python -m aesmodes.filecrypt decrypt report.pdf.aesm
+```
+
+See [docs/encryptor.md](docs/encryptor.md) for the file format and how it works.
 
 ## Usage (library)
 
