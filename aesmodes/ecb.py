@@ -1,7 +1,7 @@
 from collections.abc import Iterator
 from dataclasses import dataclass
 
-from aesmodes.aes_core import AES128
+from aesmodes.aes_core import AES
 from aesmodes.padding import BLOCK_SIZE, pad, unpad
 
 
@@ -44,11 +44,8 @@ def _as_bytes(value: BytesLike, field: str) -> bytes:
     return bytes(value)
 
 
-def _aes(key: BytesLike) -> AES128:
-    key = _as_bytes(key, "Key")
-    if len(key) != BLOCK_SIZE:
-        raise ValueError("The AES-128 key must be exactly 16 bytes.")
-    return AES128(key)
+def _aes(key: BytesLike) -> AES:
+    return AES(_as_bytes(key, "Key"))
 
 
 def _valid_ciphertext(ciphertext: BytesLike) -> bytes:
@@ -63,8 +60,10 @@ def _check_strip_padding(strip_padding: bool) -> None:
         raise ValueError("strip_padding must be True or False.")
 
 
-def ecb_encrypt(key: BytesLike, plaintext: BytesLike) -> ModeResult:
+def ecb_encrypt(key: BytesLike, plaintext: str | BytesLike) -> ModeResult:
     aes = _aes(key)
+    if isinstance(plaintext, str):
+        plaintext = plaintext.encode("utf-8")
     padded = pad(_as_bytes(plaintext, "Plaintext"))
     steps = []
     for index, plain in enumerate(_blocks(padded), start=1):

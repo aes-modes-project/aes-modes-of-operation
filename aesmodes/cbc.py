@@ -1,7 +1,7 @@
 from collections.abc import Iterator
 from dataclasses import dataclass
 
-from aesmodes.aes_core import AES128
+from aesmodes.aes_core import AES
 from aesmodes.padding import BLOCK_SIZE, pad, unpad
 
 
@@ -45,11 +45,8 @@ def _as_bytes(value: BytesLike, field: str) -> bytes:
     return bytes(value)
 
 
-def _aes(key: BytesLike) -> AES128:
-    key = _as_bytes(key, "Key")
-    if len(key) != BLOCK_SIZE:
-        raise ValueError("The AES-128 key must be exactly 16 bytes.")
-    return AES128(key)
+def _aes(key: BytesLike) -> AES:
+    return AES(_as_bytes(key, "Key"))
 
 
 def _valid_ciphertext(ciphertext: BytesLike) -> bytes:
@@ -75,9 +72,11 @@ def _xor(left: bytes, right: bytes) -> bytes:
     return bytes(a ^ b for a, b in zip(left, right, strict=True))
 
 
-def cbc_encrypt(key: BytesLike, plaintext: BytesLike, iv: BytesLike = ZERO_IV) -> ModeResult:
+def cbc_encrypt(key: BytesLike, plaintext: str | BytesLike, iv: BytesLike = ZERO_IV) -> ModeResult:
     iv = _valid_iv(iv)
     aes = _aes(key)
+    if isinstance(plaintext, str):
+        plaintext = plaintext.encode("utf-8")
     padded = pad(_as_bytes(plaintext, "Plaintext"))
     previous_cipher = iv
     steps = []
