@@ -388,20 +388,8 @@
       hero.insertAdjacentElement("afterend", choices);
     }
 
-    // A compact journey bar appears on every page, so arrows are visible
-    // immediately, not only after a long scroll through the lessons.
-    const pathbar = document.createElement("nav");
-    pathbar.className = "aes-pathbar";
-    pathbar.setAttribute("aria-label", "Previous and next page");
-    pathbar.innerHTML = `
-      <span class="aes-path-label" id="aes-path-label">Explore AES</span>
-      <div class="aes-path-controls">
-        <a id="aes-path-previous" href="#home" aria-label="Previous page">← Previous</a>
-        <a id="aes-path-next" href="#aes" aria-label="Next page">Next →</a>
-      </div>`;
-    main.prepend(pathbar);
-
-    // Also place clear next/previous links at the end of each long lesson.
+    // Keep a single, clear previous/next navigation bar at the bottom of
+    // each page, after the content. No duplicate arrows above the lessons.
     learningJourney.forEach((step, i) => {
       const section = document.getElementById(`page-${step.id}`);
       if (!section) return;
@@ -431,7 +419,7 @@
         font-weight:700;padding:8px 13px;transition:background .15s,box-shadow .15s;}
       .nav a.aes-quick-link:hover {background:#cfebdf;box-shadow:0 2px 8px rgba(16,87,71,.12);}
       .nav a.aes-quick-link.active {background:#115d4d;border-color:#115d4d;color:white;}
-      .nav a:focus-visible, .aes-pathbar a:focus-visible, .aes-page-pager a:focus-visible,
+      .nav a:focus-visible, .aes-page-pager a:focus-visible,
       .aes-choices a:focus-visible {outline:3px solid #2c7a68;outline-offset:3px;}
       .aes-choices {display:flex;align-items:center;justify-content:space-between;gap:22px;
         background:#edf5f1;border:1px solid #c3dfd3;border-radius:12px;padding:20px 24px;margin:2px 0 24px;}
@@ -446,15 +434,6 @@
       .aes-choice-primary:hover {background:#0c483b;color:#fff;}
       .aes-choice-secondary {background:#fff;color:#155c4d;border:1px solid #8ebdab;}
       .aes-choice-secondary:hover {background:#f5faf7;}
-      .aes-pathbar {display:flex;align-items:center;justify-content:space-between;gap:15px;
-        margin:0 0 18px;padding:8px 0 13px;border-bottom:1px solid var(--rule);}
-      .aes-path-label {font-size:13px;color:var(--muted);}
-      .aes-path-controls {display:flex;gap:9px;flex-wrap:wrap;}
-      .aes-path-controls a {display:inline-flex;align-items:center;gap:5px;text-decoration:none;
-        border:1px solid var(--rule-strong);color:var(--ink);border-radius:6px;
-        padding:6px 11px;background:white;font-size:13px;white-space:nowrap;}
-      .aes-path-controls a:hover {border-color:#115d4d;color:#115d4d;background:#edf5f1;}
-      .aes-path-controls a[aria-disabled="true"] {opacity:.35;pointer-events:none;}
       .aes-page-pager {display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;
         border-top:1px solid var(--rule);margin-top:35px;padding:20px 0 2px;}
       .aes-page-pager a {display:inline-flex;align-items:center;gap:12px;padding:11px 14px;
@@ -475,8 +454,6 @@
         .aes-choices {padding:16px;}
         .aes-choices-actions{width:100%;}
         .aes-choices-actions a {justify-content:center;flex:1 1 125px;}
-        .aes-pathbar {align-items:flex-start;flex-direction:column;gap:8px;}
-        .aes-path-controls {width:100%;justify-content:space-between;}
         .aes-page-pager {grid-template-columns:1fr 1fr;gap:10px;}
         .aes-page-progress {display:none;}
         .aes-page-pager a {padding:10px;font-size:17px;}
@@ -487,28 +464,8 @@
   }
 
   function updateJourney(page) {
-    const i = learningJourney.findIndex((step) => step.id === page);
-    if (i < 0) return;
-    const previous = learningJourney[i - 1], next = learningJourney[i + 1];
-    const label = document.getElementById("aes-path-label");
-    const prevLink = document.getElementById("aes-path-previous");
-    const nextLink = document.getElementById("aes-path-next");
-    if (label) label.textContent = page === "simple"
-      ? "AES tool · Encrypt & decrypt"
-      : `Guided learning · ${i + 1} of 5`;
-    if (prevLink) {
-      prevLink.href = previous ? `#${previous.id}` : "#home";
-      prevLink.textContent = previous ? `← ${previous.label}` : "← Previous";
-      prevLink.setAttribute("aria-disabled", String(!previous));
-      prevLink.tabIndex = previous ? 0 : -1;
-    }
-    if (nextLink) {
-      nextLink.href = next ? `#${next.id}` : "#home";
-      nextLink.textContent = next ? `${next.label} →` : "↻ Overview";
-      nextLink.setAttribute("aria-disabled", "false");
-      nextLink.tabIndex = 0;
-    }
-    document.title = `${learningJourney[i].label} · AES step by step`;
+    const step = learningJourney.find((item) => item.id === page);
+    if (step) document.title = `${step.label} · AES step by step`;
   }
 
   function show() {
